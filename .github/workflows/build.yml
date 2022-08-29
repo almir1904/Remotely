@@ -100,7 +100,7 @@ jobs:
       Configuration: Release
       PfxBase64: ${{ secrets.BASE64_ENCODED_PFX }}
       PfxKey: ${{ secrets.PFX_KEY }}
-      ServerUrl: remotely.almir1904.eu
+      ServerUrl: ${{ github.event.inputs.serverUrl }}
 
     steps:
        
