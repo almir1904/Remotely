@@ -107,6 +107,9 @@ namespace Remotely.Server.API
                     case "macos-x64":
                         filePath = Path.Combine(HostEnv.WebRootPath, "Content", "Remotely-MacOS-x64.zip");
                         break;
+                    case "macos-arm64":
+                        filePath = Path.Combine(HostEnv.WebRootPath, "Content", "Remotely-MacOS-arm64.zip");
+                        break;
                     default:
                         DataService.WriteEvent($"Unknown platform requested in {nameof(AgentUpdateController)}. " +
                             $"Platform: {platform}. " +
