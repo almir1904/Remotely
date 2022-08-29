@@ -263,13 +263,23 @@ jobs:
           Remove-Item -path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx"
         }
 
-
-    - name: Release
-      uses: softprops/action-gh-release@91409e712cf565ce9eff10c87a8d1b11b81757ae
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        # Identify if this is a pre release by checking if the tag name contains -rc, -b, -a
-        prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-b') || contains(github.ref, '-a') }}
-        files: ./publish/*
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}  
+          asset_path: ./publish/Remotely_Server_Linux-x64.zip
+          asset_name: Remotely_Server_Linux-x64.zip
+          asset_content_type: application/zip
