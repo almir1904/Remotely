@@ -41,5 +41,5 @@ jobs:
           context: ./Server
           push: true
           platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ghcr.io/almir1904/docker-qbittorrent-enhanced:latest
           labels: ${{ steps.meta.outputs.labels }}
