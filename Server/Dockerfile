@@ -24,7 +24,7 @@ RUN \
 RUN \
   mkdir -p /var/www/remotely && \
   mkdir /config && \
-  wget -q https://github.com/lucent-sea/Remotely/releases/latest/download/Remotely_Server_Linux-x64.zip && \
+  wget -q https://github.com/almir1904/Remotely/releases/latest/download/Remotely_Server_Linux-x64.zip && \
   unzip -o Remotely_Server_Linux-x64.zip -d /var/www/remotely && \
   rm Remotely_Server_Linux-x64.zip
 
