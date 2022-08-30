@@ -271,6 +271,19 @@ jobs:
     needs: [build-mac-x64, build-mac-arm64,build-windows] 
         
     steps:
+    
+    - name: Set current version
+      shell: pwsh
+      run: |
+          $VersionString = git show -s --format=%ci
+          $VersionDate = [DateTimeOffset]::Parse($VersionString)
+          $Year = $VersionDate.Year.ToString()
+          $Month = $VersionDate.Month.ToString().PadLeft(2, "0")
+          $Day = $VersionDate.Day.ToString().PadLeft(2, "0")
+          $Hour = $VersionDate.Hour.ToString().PadLeft(2, "0")
+          $Minute = $VersionDate.Minute.ToString().PadLeft(2, "0")
+          $CurrentVersion = "$Year.$Month.$Day.$Hour$Minute"
+          echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
 
     
     - name: Create Release
@@ -278,10 +291,9 @@ jobs:
       uses: actions/create-release@v1
       env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-          VERSION: ${{ needs.build-mac-x64.outputs.CurrentVersion }}"
       with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ env.CurrentVersion }}
+          release_name: Release ${{ env.CurrentVersion }}
           draft: false
           prerelease: false
       
