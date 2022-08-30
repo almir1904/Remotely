@@ -278,6 +278,7 @@ jobs:
       uses: actions/create-release@v1
       env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+          VERSION: ${{ needs.build-mac-x64.outputs.CurrentVersion }}"
       with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
