@@ -248,6 +248,30 @@ jobs:
       run: |
         .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname $env:ServerUrl -CurrentVersion $env:CurrentVersion -RID ${{ github.event.inputs.rid }} -OutDir "$env:GITHUB_WORKSPACE\publish"
 
+  
+
+    # Upload build artifact to be deployed from Ubuntu runner
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v2
+      with:
+        path: ./publish/
+        name: Remotely_Server_Linux-x64 
+
+    # Remove the pfx
+    - name: Remove the pfx
+      run: |
+        if (Test-Path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx") {
+          Remove-Item -path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx"
+        }
+
+  Upload_Release:
+
+    runs-on: windows-latest  # For a list of available runner types, refer to
+                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    needs: [build-mac-x64, build-mac-arm64,build-windows] 
+        
+    steps:
+    
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -258,13 +282,17 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-
-    # Upload build artifact to be deployed from Ubuntu runner
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v2
+      
+    - run: mkdir C:\Publish\
+    
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3.0.0
       with:
-        path: ./publish/
+      # Artifact name
         name: Remotely_Server_Linux-x64
+        # Destination path
+        path: C:\Publish
+        
         
     - name: upload linux artifact
       uses: actions/upload-release-asset@v1
@@ -272,16 +300,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./publish/Remotely_Server_Linux-x64*
+        asset_path: C:\Publish\Remotely_Server_Linux-x64.zip
         asset_name: Remotely_Server_Linux-x64
         asset_content_type: application/gzip
-    
-
-    # Remove the pfx
-    - name: Remove the pfx
-      run: |
-        if (Test-Path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx") {
-          Remove-Item -path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx"
-        }
-
-
+  
+  
