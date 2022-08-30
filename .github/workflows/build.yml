@@ -300,7 +300,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: C:\Publish\Remotely_Server_Linux-x64.zip
+        asset_path: C:\Publish\Remotely_Server_Linux-x64
         asset_name: Remotely_Server_Linux-x64
         asset_content_type: application/gzip
   
