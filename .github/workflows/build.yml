@@ -275,7 +275,7 @@ jobs:
     - name: Set current version
       shell: pwsh
       run: |
-          $CurrentVersion = Get-Date -UFormat %Y.%D.%H%m
+          $CurrentVersion = Get-Date -Format yyyy.mm.dd.HHmm
           echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
 
     
