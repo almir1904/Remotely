@@ -320,11 +320,11 @@ jobs:
         # Destination path
         path: C:\Publisharm64\
     
-    - run: dir C:\Publish\
+    - run: dir C:\Publishx64\
     - run: Compress-Archive -Path C:\Publishx64\* -DestinationPath C:\Remotely_Server_Linux-x64.zip -Force
     - run: Write-Host "$CurrentVersion"
     
-    - run: dir C:\Publish\
+    - run: dir C:\Publisharm64\
     - run: Compress-Archive -Path C:\Publisharm64\* -DestinationPath C:\Remotely_Server_Linux-arm64.zip -Force
     - run: Write-Host "$CurrentVersion"
     
