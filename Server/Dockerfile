@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
 EXPOSE 5000
 
@@ -19,7 +19,7 @@ RUN \
   wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb && \
   dpkg -i packages-microsoft-prod.deb && \
   apt-get -y update && \
-  apt-get -y install aspnetcore-runtime-5.0
+  apt-get -y install aspnetcore-runtime-6.0
 
 RUN \
   mkdir -p /var/www/remotely && \
