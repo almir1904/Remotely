@@ -6,6 +6,9 @@ ENV ASPNETCORE_ENVIRONMENT="Production"
 ENV ASPNETCORE_URLS="http://*:5000"
 
 RUN \
+  wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && \
+  dpkg -i packages-microsoft-prod.deb && \
+  rm packages-microsoft-prod.deb && \
   apt-get -y update && \
   apt-get -y install \
   apt-utils \
@@ -14,6 +17,7 @@ RUN \
   unzip \
   acl \
   libssl1.0
+  
 
 RUN \
   apt-get -y install aspnetcore-runtime-6.0
