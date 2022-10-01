@@ -21,7 +21,7 @@ RUN \
   mkdir -p /opt/dotnet && \
   wget https://download.visualstudio.microsoft.com/download/pr/bff2e771-8180-47eb-b12a-757a67001e21/63a7f79af649efe65c20f2ca56834048/aspnetcore-runtime-6.0.9-linux-arm64.tar.gz -O /tmp/aspnetcore-runtime-6.0.9-linux-arm64.tar.gz && \
   tar zxf /tmp/aspnetcore-runtime-6.0.9-linux-arm64.tar.gz -C /opt/dotnet && \
-  ln -s /opt/dotnet/dotnet /usr/local/bin
+  ln -s /opt/dotnet/dotnet /usr/local/bin/
   
 
 RUN \
