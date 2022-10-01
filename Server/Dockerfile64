@@ -23,7 +23,7 @@ RUN \
   wget https://dot.net/v1/dotnet-install.sh -O /opt/dotnet-install.sh && \
   chmod a+x /opt/dotnet-install.sh && \
   ./opt/dotnet-install.sh -c Current --runtime aspnetcore && \
-  echo "export PATH=/root/.dotnet/:${PATH}" >> /root/.bashrc
+  cp /root/.dotnet/dotnet /usr/bin/
   
 
 RUN \
