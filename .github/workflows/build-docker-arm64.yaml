@@ -42,5 +42,5 @@ jobs:
           file: ./Server/Dockerfile64
           push: true
           platforms: linux/arm64
-          tags: ghcr.io/almir1904/remotely:latest
+          tags: ghcr.io/almir1904/remotely:arm64
           labels: ${{ steps.meta.outputs.labels }}
