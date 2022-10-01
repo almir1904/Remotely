@@ -5,10 +5,6 @@ EXPOSE 5000
 ENV ASPNETCORE_ENVIRONMENT="Production"
 ENV ASPNETCORE_URLS="http://*:5000"
 
-RUN \
-  wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && \
-  dpkg -i packages-microsoft-prod.deb && \
-  rm packages-microsoft-prod.deb
 
 RUN \
   apt-get -y update && \
@@ -19,9 +15,14 @@ RUN \
   unzip \
   acl \
   libssl1.0
-  
 
 RUN \
+  wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && \
+  sudo dpkg -i packages-microsoft-prod.deb && \
+  rm packages-microsoft-prod.deb
+
+RUN \
+  apt-get -y update && \
   apt-get -y install aspnetcore-runtime-6.0
 
 RUN \
