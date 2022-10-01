@@ -8,7 +8,9 @@ ENV ASPNETCORE_URLS="http://*:5000"
 RUN \
   wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && \
   dpkg -i packages-microsoft-prod.deb && \
-  rm packages-microsoft-prod.deb && \
+  rm packages-microsoft-prod.deb
+
+RUN \
   apt-get -y update && \
   apt-get -y install \
   apt-utils \
