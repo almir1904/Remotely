@@ -39,6 +39,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: ./Server
+          file: ./Dockerfile64
           push: true
           platforms: linux/arm64
           tags: ghcr.io/almir1904/remotely:latest
