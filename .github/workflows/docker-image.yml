@@ -40,6 +40,6 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           context: ./Server
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64, linux/arm64
           tags: ghcr.io/almir1904/remotely:latest
           labels: ${{ steps.meta.outputs.labels }}
