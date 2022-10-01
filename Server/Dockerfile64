@@ -1,11 +1,9 @@
-FROM ubuntu:jammy
+FROM mcr.microsoft.com/dotnet/aspnet:6.0
 
 EXPOSE 5000
 
 ENV ASPNETCORE_ENVIRONMENT="Production"
 ENV ASPNETCORE_URLS="http://*:5000"
-#ENV PATH "$PATH:/root/.dotnet/"
-
 
 RUN \
   apt-get -y update && \
@@ -15,23 +13,14 @@ RUN \
   apt-transport-https \
   unzip \
   acl \
-  libssl1.0 && \
-  apt-get clean 
-
-RUN \
-  mkdir -p /opt/dotnet && \
-  wget https://dot.net/v1/dotnet-install.sh -O /opt/dotnet-install.sh && \
-  chmod a+x /opt/dotnet-install.sh && \
-  ./opt/dotnet-install.sh -c Current --runtime aspnetcore && \
-  cp /root/.dotnet/dotnet /usr/bin/
-  
+  libssl1.0  
 
 RUN \
   mkdir -p /var/www/remotely && \
   mkdir /config && \
-  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-x64.zip && \
-  unzip -o Remotely_Server_Linux-x64.zip -d /var/www/remotely && \
-  rm Remotely_Server_Linux-x64.zip
+  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-arm64.zip && \
+  unzip -o Remotely_Server_Linux-arm64.zip -d /var/www/remotely && \
+  rm Remotely_Server_Linux-arm64.zip
 
 RUN \
   mkdir -p /remotely-data && \
