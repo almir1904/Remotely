@@ -1,4 +1,4 @@
-FROM ubuntu:jammy
+FROM mcr.microsoft.com/dotnet/aspnet:6.0
 
 EXPOSE 5000
 
@@ -15,9 +15,6 @@ RUN \
   unzip \
   acl \
   libssl1.0
-
-RUN \
-  apt-get -y install aspnetcore-runtime-6.0
 
 RUN \
   mkdir -p /var/www/remotely && \
