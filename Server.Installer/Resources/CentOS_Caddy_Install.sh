@@ -2,7 +2,6 @@
 echo "Thanks for trying Remotely!"
 echo
 
-
 Args=( "$@" )
 ArgLength=${#Args[@]}
 
@@ -26,8 +25,6 @@ if [ -z "$HostName" ]; then
     read -p "Enter server host (e.g. remotely.yourdomainname.com): " HostName
 fi
 
-chmod +x "$AppRoot/Remotely_Server"
-
 echo "Using $AppRoot as the Remotely website's content directory."
 
 yum update
@@ -40,7 +37,7 @@ sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-
 
 yum -y install apt-transport-https
 yum -y update
-yum -y install aspnetcore-runtime-5.0
+yum -y install aspnetcore-runtime-6.0
 
 
  # Install other prerequisites.
@@ -53,20 +50,75 @@ yum -y install libc6-dev
 yum -y install libgdiplus
 
 
-# Install Caddy
-yum install yum-plugin-copr
-yum copr enable @caddy/caddy
-yum install caddy
+# Set permissions on Remotely files.
+setfacl -R -m u:apache:rwx $AppRoot
+chown -R apache:apache $AppRoot
+chmod +x "$AppRoot/Remotely_Server"
 
 
-# Configure Caddy
-caddyConfig="
-$HostName {
-    reverse_proxy 127.0.0.1:5000
-}
-"
+# Install Nginx
+yum -y install nginx
 
-echo "$caddyConfig" > /etc/caddy/Caddyfile
+systemctl start nginx
+
+
+# Configure Nginx
+nginxConfig="server {
+    listen        80;
+    server_name   $HostName *.$HostName;
+    location / {
+        proxy_pass         http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade \$http_upgrade;
+        proxy_set_header   Connection close;
+        proxy_set_header   Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+    }
+
+    location /_blazor {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \"Upgrade\";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    location /AgentHub {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \"Upgrade\";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    location /ViewerHub {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \"Upgrade\";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    location /CasterHub {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \"Upgrade\";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}"
+
+echo "$nginxConfig" > /etc/nginx/conf.d/remotely.conf
+
+# Test config.
+nginx -t
+
+# Reload.
+nginx -s reload
 
 
 # Create service.
@@ -99,5 +151,7 @@ firewall-cmd --permanent --zone=public --add-service=http
 firewall-cmd --permanent --zone=public --add-service=https
 firewall-cmd --reload
 
-# Restart caddy
-systemctl restart caddy
+# Install Certbot and get SSL cert.
+yum -y install certbot python3-certbot-nginx
+
+certbot --nginx
