@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <ApplicationIcon>Assets\favicon.ico</ApplicationIcon>
     <AssemblyName>Remotely_Desktop</AssemblyName>
     <RootNamespace>Remotely.Desktop.XPlat</RootNamespace>
@@ -52,9 +52,11 @@
     <EmbeddedResource Include="Assets\Remotely_Icon.png" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.10.15" />
     <PackageReference Include="Avalonia.Desktop" Version="0.10.15" />
     <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.15" />
+    <PackageReference Include="Microsoft.DotNet.UpgradeAssistant.Extensions.Default.Analyzers" Version="0.4.355802">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Desktop.Core\Desktop.Core.csproj" />

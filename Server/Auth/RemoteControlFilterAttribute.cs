@@ -7,7 +7,7 @@ using System;
 
 namespace Remotely.Server.Auth
 {
-    public class RemoteControlFilterAttribute : ActionFilterAttribute, IAuthorizationFilter
+    public class RemoteControlFilterAttribute : Microsoft.AspNetCore.Mvc.Filters.ActionFilterAttribute, IAuthorizationFilter
     {
         private readonly IApplicationConfig _appConfig;
 
