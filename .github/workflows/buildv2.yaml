@@ -44,7 +44,7 @@ jobs:
          ref: Beta
 
       - name: Install .NET Core
-        uses: actions/setup-dotnet@v1.9.0
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
         
@@ -102,7 +102,7 @@ jobs:
          ref: Beta
 
       - name: Install .NET Core
-        uses: actions/setup-dotnet@v1.9.0
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
         
@@ -182,7 +182,7 @@ jobs:
         
     # Install the .NET Core workload
     - name: Install .NET Core
-      uses: actions/setup-dotnet@v1.9.0
+      uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 7.0.x
       
