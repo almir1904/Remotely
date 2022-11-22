@@ -18,7 +18,7 @@
 # Once your branch has been updated, you can run this workflow again
 # to build the latest version.
 
-name: Build
+name: Build Beta
 
 on:
   workflow_dispatch:
@@ -44,7 +44,7 @@ jobs:
       - name: Install .NET Core
         uses: actions/setup-dotnet@v1.9.0
         with:
-          dotnet-version: 6.0.x
+          dotnet-version: 7.0.x
         
       - name: Setup NuGet.exe for use with actions
         uses: NuGet/setup-nuget@v1.0.5
@@ -100,7 +100,7 @@ jobs:
       - name: Install .NET Core
         uses: actions/setup-dotnet@v1.9.0
         with:
-          dotnet-version: 6.0.x
+          dotnet-version: 7.0.x
         
       - name: Setup NuGet.exe for use with actions
         uses: NuGet/setup-nuget@v1.0.5
@@ -181,7 +181,7 @@ jobs:
     - name: Install .NET Core
       uses: actions/setup-dotnet@v1.9.0
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 7.0.x
       
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
@@ -299,7 +299,7 @@ jobs:
           tag_name: ${{ env.CurrentVersion }}
           release_name: Release ${{ env.CurrentVersion }}
           draft: false
-          prerelease: false
+          prerelease: true
       
     - run: mkdir C:\Publishx64\
     - run: mkdir C:\Publisharm64\
