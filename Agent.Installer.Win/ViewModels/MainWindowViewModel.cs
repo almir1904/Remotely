@@ -12,12 +12,13 @@ using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
+//using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Net;
+using Nancy.Json;
 
 namespace Remotely.Agent.Installer.Win.ViewModels
 {
