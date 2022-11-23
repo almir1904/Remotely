@@ -49,7 +49,7 @@ jobs:
           dotnet-version: 7.0.x
         
       - name: Setup NuGet.exe for use with actions
-        uses: nuget/setup-nuget@v1
+        uses: NuGet/setup-nuget@v1.0.5
 
       - name: Set current version
         shell: pwsh
@@ -107,7 +107,7 @@ jobs:
           dotnet-version: 7.0.x
         
       - name: Setup NuGet.exe for use with actions
-        uses: NuGet/setup-nuget@v1
+        uses: NuGet/setup-nuget@v1.0.5
 
       - name: Set current version
         shell: pwsh
