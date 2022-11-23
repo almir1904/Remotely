@@ -1,7 +1,6 @@
 ﻿using IWshRuntimeLibrary;
 using Microsoft.VisualBasic.FileIO;
 using Microsoft.Win32;
-using Nancy.Json;
 using Remotely.Agent.Installer.Win.Utilities;
 using Remotely.Shared.Models;
 using System;
@@ -15,6 +14,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Threading.Tasks;
+using System.Web.Script.Serialization;
 using System.Windows;
 using FileIO = System.IO.File;
 

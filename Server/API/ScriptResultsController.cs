@@ -26,7 +26,7 @@ namespace Remotely.Server.API
         // GET: api/<controller>
         [HttpGet]
         [ServiceFilter(typeof(ApiAuthorizationFilter))]
-        public Microsoft.AspNetCore.Mvc.ActionResult DownloadAll()
+        public ActionResult DownloadAll()
         {
             Request.Headers.TryGetValue("OrganizationID", out var orgID);
 
@@ -37,7 +37,7 @@ namespace Remotely.Server.API
 
         [HttpGet("{scriptId}")]
         [ServiceFilter(typeof(ApiAuthorizationFilter))]
-        public Microsoft.AspNetCore.Mvc.FileResult DownloadResults(string scriptId)
+        public FileResult DownloadResults(string scriptId)
         {
             Request.Headers.TryGetValue("OrganizationID", out var orgID);
 

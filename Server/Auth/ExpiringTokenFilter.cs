@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Remotely.Server.Auth
 {
-    public class ExpiringTokenFilter : Microsoft.AspNetCore.Mvc.Filters.ActionFilterAttribute, IAuthorizationFilter
+    public class ExpiringTokenFilter : ActionFilterAttribute, IAuthorizationFilter
     {
         private readonly IDataService _dataService;
         private readonly IExpiringTokenService _expiringTokenService;

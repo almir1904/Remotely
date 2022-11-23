@@ -12,7 +12,7 @@
             {
               "id": "Microsoft.DotNet.UpgradeAssistant.Steps.Backup.BackupStep",
               "fullDescription": {
-                "text": "Project backed up to E:\\Github\\remotelyv2.backup\\LoadTester"
+                "text": "Project backed up to E:\\Github\\remotelyv3.backup\\LoadTester"
               },
               "helpUri": "about:blank"
             }
@@ -23,13 +23,13 @@
         {
           "ruleId": "Microsoft.DotNet.UpgradeAssistant.Steps.Backup.BackupStep",
           "message": {
-            "text": "Complete: Project backed up to E:\\Github\\remotelyv2.backup\\LoadTester"
+            "text": "Complete: Project backed up to E:\\Github\\remotelyv3.backup\\LoadTester"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "file:///E:/Github/remotelyv2.backup/LoadTester"
+                  "uri": "file:///E:/Github/remotelyv3.backup/LoadTester"
                 },
                 "region": {}
               }
@@ -66,7 +66,44 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "file:///E:/Github/remotelyv2/Tests/LoadTester/LoadTester.csproj"
+                  "uri": "file:///E:/Github/remotelyv3/Tests/LoadTester/LoadTester.csproj"
+                },
+                "region": {}
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits"
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Add package 'Microsoft.Windows.Compatibility'",
+          "semanticVersion": "",
+          "informationUri": "https://github.com/dotnet/upgrade-assistant#usage",
+          "rules": [
+            {
+              "id": "Microsoft.DotNet.UpgradeAssistant.Steps.Packages.PackageUpdaterStep+PackageManipulationStep`1[[Microsoft.DotNet.UpgradeAssistant.NuGetReference, Microsoft.DotNet.UpgradeAssistant.Abstractions, Version=0.4.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]]",
+              "fullDescription": {
+                "text": "Add package 'Microsoft.Windows.Compatibility'"
+              },
+              "helpUri": "about:blank"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "Microsoft.DotNet.UpgradeAssistant.Steps.Packages.PackageUpdaterStep+PackageManipulationStep`1[[Microsoft.DotNet.UpgradeAssistant.NuGetReference, Microsoft.DotNet.UpgradeAssistant.Abstractions, Version=0.4.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]]",
+          "message": {
+            "text": "Complete: Add package 'Microsoft.Windows.Compatibility'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///E:/Github/remotelyv3/Tests/LoadTester/LoadTester.csproj"
                 },
                 "region": {}
               }
@@ -103,7 +140,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "file:///E:/Github/remotelyv2/Tests/LoadTester/LoadTester.csproj"
+                  "uri": "file:///E:/Github/remotelyv3/Tests/LoadTester/LoadTester.csproj"
                 },
                 "region": {}
               }

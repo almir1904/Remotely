@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Remotely.Server.Hubs;
@@ -10,9 +9,7 @@ using Remotely.Server.Services;
 using Remotely.Shared.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -99,7 +96,7 @@ namespace Remotely.Tests
             {
                 Context = new CallerContext()
             };
-            
+
 
             var agentHubClients = new Mock<IHubCallerClients>();
             var agentHubCaller = new Mock<ISingleClientProxy>();
@@ -116,8 +113,8 @@ namespace Remotely.Tests
             agentHubCaller.Verify(x => x.SendCoreAsync("UninstallAgent", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
             circuitConnection.Verify(x => x.InvokeCircuitEvent(
-                CircuitEventName.DeviceUpdate, 
-                It.Is<Device>(x => x.ID == _testData.Device1.ID)), 
+                CircuitEventName.DeviceUpdate,
+                It.Is<Device>(x => x.ID == _testData.Device1.ID)),
                 Times.Once);
         }
 
@@ -150,7 +147,7 @@ namespace Remotely.Tests
 
             public override void Abort()
             {
-                
+
             }
         }
     }

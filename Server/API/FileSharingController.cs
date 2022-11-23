@@ -21,7 +21,7 @@ namespace Remotely.Server.API
 
         [HttpGet("{id}")]
         [ServiceFilter(typeof(ExpiringTokenFilter))]
-        public Microsoft.AspNetCore.Mvc.ActionResult Get(string id)
+        public ActionResult Get(string id)
         {
             var sharedFile = _dataService.GetSharedFiled(id);
             if (sharedFile != null)

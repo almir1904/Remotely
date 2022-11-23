@@ -43,7 +43,7 @@ namespace Remotely.Server.API
 
 
         [HttpGet("[action]/{downloadId}")]
-        public Microsoft.AspNetCore.Mvc.ActionResult ClearDownload(string downloadId)
+        public ActionResult ClearDownload(string downloadId)
         {
             DataService.WriteEvent($"Clearing download ID {downloadId}.", EventType.Debug, null);
             _downloadingAgents.Remove(downloadId);
@@ -51,7 +51,7 @@ namespace Remotely.Server.API
         }
 
         [HttpGet("[action]/{platform}/{downloadId}")]
-        public async Task<Microsoft.AspNetCore.Mvc.ActionResult> DownloadPackage(string platform, string downloadId)
+        public async Task<ActionResult> DownloadPackage(string platform, string downloadId)
         {
             try
             {

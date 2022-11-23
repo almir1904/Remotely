@@ -6,14 +6,14 @@ using System.Net;
 namespace Remotely.Server.Attributes
 {
     [AttributeUsage(AttributeTargets.Method)]
-    public class ActionRateLimiterAttribute : Microsoft.AspNetCore.Mvc.Filters.ActionFilterAttribute
+    public class ActionRateLimiterAttribute : ActionFilterAttribute
     {
         public string Action { get; set; }
         public int TimeoutInSeconds { get; set; } = 5;
         private static MemoryCache RequestCache { get; } = new MemoryCache(new MemoryCacheOptions());
 
 
-        public override void OnActionExecuting(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+        public override void OnActionExecuting(ActionExecutingContext context)
         {
             var ip = context.HttpContext.Request.HttpContext.Connection.RemoteIpAddress;
             var key = $"Action-{ip}";

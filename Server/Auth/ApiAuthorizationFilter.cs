@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Remotely.Server.Auth
 {
-    public class ApiAuthorizationFilter : Microsoft.AspNetCore.Mvc.Filters.ActionFilterAttribute, IAuthorizationFilter
+    public class ApiAuthorizationFilter : ActionFilterAttribute, IAuthorizationFilter
     {
         public ApiAuthorizationFilter(IDataService dataService)
         {

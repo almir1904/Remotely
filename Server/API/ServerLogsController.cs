@@ -19,7 +19,7 @@ namespace Remotely.Server.API
 
         [ServiceFilter(typeof(ApiAuthorizationFilter))]
         [HttpGet("Download")]
-        public Microsoft.AspNetCore.Mvc.ActionResult Download()
+        public ActionResult Download()
         {
             Request.Headers.TryGetValue("OrganizationID", out var orgID);
             var logs = DataService.GetAllEventLogs(orgID);
