@@ -20,9 +20,11 @@ RUN \
 RUN \
   mkdir -p /var/www/remotely && \
   mkdir /config && \
-  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-x64.zip && \
-  unzip -o Remotely_Server_Linux-x64.zip -d /var/www/remotely && \
-  rm Remotely_Server_Linux-x64.zip
+  arch=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/x64/) && \
+  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${arch}.zip && \
+  unzip -o Remotely_Server_Linux-${arch}.zip -d /var/www/remotely && \
+  rm Remotely_Server_Linux-${arch}.zip
+
 
 RUN \
   mkdir -p /remotely-data && \
