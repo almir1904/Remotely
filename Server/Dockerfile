@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:7.0
 
 EXPOSE 5000
 
@@ -14,6 +14,7 @@ RUN \
   apt-transport-https \
   unzip \
   acl \
+  curl \
   libssl1.0
 
 RUN \
@@ -36,3 +37,5 @@ COPY DockerMain.sh /
 RUN chmod 755 /DockerMain.sh
 
 ENTRYPOINT ["/DockerMain.sh"]
+HEALTHCHECK CMD curl --fail http://localhost:5000/ || exit 1
+
