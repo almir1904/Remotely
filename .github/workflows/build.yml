@@ -175,7 +175,7 @@ jobs:
     - name: Run Publish script x64
       shell: powershell
       run: |
-        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-x64 -OutDir "$env:GITHUB_WORKSPACE\publish"
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-x64 -OutDir "$env:GITHUB_WORKSPACE\publishx64"
 
     - name: Run Publish script arm64
       shell: powershell
@@ -214,9 +214,7 @@ jobs:
     - name: Set current version
       shell: powershell
       run: |
-        $VersionString = git show -s --format=%ci
-        $VersionDate = [DateTimeOffset]::Parse($VersionString)
-        $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
+        $CurrentVersion = Get-Date -Format yyyy.MM.dd.HHmm
         echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
         Write-Host "Setting current version to $CurrentVersion."
 
