@@ -1,5 +1,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-jammy
+
+ARG TARGETPLATFORM
 ARG TARGETARCH
+ARG TARGETVARIANT
 
 EXPOSE 5000
 
@@ -19,15 +22,15 @@ RUN \
   libssl1.0
 
 RUN \
+  if [ "$TARGETARCH" = "amd64" ]; \
+    then export ARCH=x64; \
+    else export ARCH=$TARGETARCH; \
+    fi; \
   mkdir -p /var/www/remotely && \
   mkdir /config && \
-  case ${TARGETARCH} in \
-            "amd64")  S6_ARCH=amd64  ;; \
-            "arm64")  S6_ARCH=aarch64  ;; \
-        esac \
-  && wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${S6_ARCH}.zip && \
-  unzip -o Remotely_Server_Linux-${S6_ARCH}.zip -d /var/www/remotely && \
-  rm Remotely_Server_Linux-${arch}.zip
+  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${ARCH}.zip && \
+  unzip -o Remotely_Server_Linux-${ARCH}.zip -d /var/www/remotely && \
+  rm Remotely_Server_Linux-${ARCH}.zip
   
 #RUN \
 #  mkdir -p /var/www/remotely && \
