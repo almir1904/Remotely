@@ -40,4 +40,7 @@ RUN chmod 755 /DockerMain.sh
 
 ENTRYPOINT ["/DockerMain.sh"]
 HEALTHCHECK CMD curl --fail http://localhost:5000/ || exit 1
+<<<<<<< HEAD
+=======
 
+>>>>>>> 8a9052ae7444f367b144ee1aa78d00258cdaa5ae
