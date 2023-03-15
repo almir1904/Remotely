@@ -1,4 +1,6 @@
 # IMPORTANT:
+																			
+
 # 1. The Server Runtime Identifier determines the target operating system
 # for which to build the server.  The default "linux-x64" will usually work
 # for most Linux-based operating systems.  You can see a full list at
@@ -20,17 +22,13 @@ name: Build
 
 on:
   workflow_dispatch:
-    inputs:
-      rid:
-        description: 'Server Runtime Identifier'     
-        required: false
-        default: "linux-x64"
+
 
 jobs:
 
   build-mac:
   
-    runs-on: macos-10.15
+    runs-on: macos-latest
   
     steps:
       - name: Checkout
@@ -63,9 +61,7 @@ jobs:
         run: |
           $VersionString = git show -s --format=%ci
           $VersionDate = [DateTimeOffset]::Parse($VersionString)
-
-          $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
-          
+          $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")										
           Write-Host "Publishing agent with version $CurrentVersion"
           dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime osx-x64 --self-contained --configuration Release --output "./Agent/bin/publish/" "./Agent/"
           Compress-Archive -Path "./Agent/bin/publish/*" -DestinationPath "./Agent/bin/Remotely-MacOS-x64.zip" -Force
@@ -75,12 +71,32 @@ jobs:
         with:
           path: ./Agent/bin/Remotely-MacOS-x64.zip
           name: Mac-Agent-x64
+		  
+      - name: Publish macOS arm64 Agent
+        shell: pwsh
+        run: |
+          $VersionString = git show -s --format=%ci
+          $VersionDate = [DateTimeOffset]::Parse($VersionString)
+
+          $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")								
+          
+          Write-Host "Publishing agent with version $CurrentVersion"
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime osx-arm64 --self-contained --configuration Release --output "./Agent/bin/publish/" "./Agent/"
+          Compress-Archive -Path "./Agent/bin/publish/*" -DestinationPath "./Agent/bin/Remotely-MacOS-arm64.zip" -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          path: ./Agent/bin/Remotely-MacOS-arm64.zip
+          name: Mac-Agent-arm64	
+
+     	  
      
   build-windows:
 
     runs-on: windows-latest  # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
-    needs: build-mac
+    needs: [build-mac]
 
     env:
       Solution_Name: Remotely.sln      
@@ -96,10 +112,19 @@ jobs:
       with:
         # Comment out the below 'repository' line if you want to build from
         # your fork instead of the author's.
-        repository: immense/Remotely
+        #repository: immense/Remotely
         submodules: recursive
         fetch-depth: 0
+
+												 
+								   
+			
+					
+																								  
+																																				
+		 
         
+		
     # Install the .NET Core workload
     - name: Install .NET Core
       uses: actions/setup-dotnet@v1.9.0
@@ -139,9 +164,8 @@ jobs:
       run: |
         $VersionString = git show -s --format=%ci
         $VersionDate = [DateTimeOffset]::Parse($VersionString)
-        
         $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
-        
+
         echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
 
         Write-Host "Setting current version to $CurrentVersion."
@@ -153,19 +177,36 @@ jobs:
         name: Mac-Agent-x64
         path: ./Server/wwwroot/Content/
 
+    - name: Download macOS arm64 Agent
+      uses: actions/download-artifact@v2
+      with:
+        name: Mac-Agent-arm64
+        path: ./Server/wwwroot/Content/	
+
     # Run the Publish script to build clients and server.
-    - name: Run Publish script
+    - name: Run Publish script x64
       shell: powershell
       run: |
-        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID ${{ github.event.inputs.rid }} -OutDir "$env:GITHUB_WORKSPACE\publish"
-        
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-x64 -OutDir "$env:GITHUB_WORKSPACE\publish"
+
+    - name: Run Publish script arm64
+      shell: powershell
+      run: |
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname $env:ServerUrl -CurrentVersion $env:CurrentVersion -RID linux-arm64 -OutDir "$env:GITHUB_WORKSPACE\publisharm64"	
+  
+
     # Upload build artifact to be deployed from Ubuntu runner
     - name: Upload build artifact
       uses: actions/upload-artifact@v2
       with:
-        path: ./publish/
-        name: Server
-    
+        path: ./publishx64/
+        name: Remotely_Server_Linux-x64 
+        
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v2
+      with:
+        path: ./publisharm64/
+        name: Remotely_Server_Linux-arm64				 
 
     # Remove the pfx
     - name: Remove the pfx
@@ -173,3 +214,81 @@ jobs:
         if (Test-Path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx") {
           Remove-Item -path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx"
         }
+
+  Upload_Release:
+
+    runs-on: windows-latest  # For a list of available runner types, refer to
+                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    needs: [build-mac-x64, build-mac-arm64,build-windows] 
+        
+    steps:
+    
+    - name: Set current version
+      shell: powershell
+      run: |
+        $VersionString = git show -s --format=%ci
+        $VersionDate = [DateTimeOffset]::Parse($VersionString)
+        $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
+        echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
+        Write-Host "Setting current version to $CurrentVersion."
+
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      with:
+          tag_name: ${{ env.CurrentVersion }}
+          release_name: Release ${{ env.CurrentVersion }}
+          draft: false
+          prerelease: false
+      
+    - run: mkdir C:\Publishx64\
+    - run: mkdir C:\Publisharm64\
+    
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3.0.0
+      with:
+      # Artifact name
+        name: Remotely_Server_Linux-x64
+        # Destination path
+        path: C:\Publishx64\
+        
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3.0.0
+      with:
+      # Artifact name
+        name: Remotely_Server_Linux-arm64
+        # Destination path
+        path: C:\Publisharm64\
+    
+    - run: dir C:\Publishx64\
+    - run: Compress-Archive -Path C:\Publishx64\* -DestinationPath C:\Remotely_Server_Linux-x64.zip -Force
+    - run: Write-Host "$CurrentVersion"
+    
+    - run: dir C:\Publisharm64\
+    - run: Compress-Archive -Path C:\Publisharm64\* -DestinationPath C:\Remotely_Server_Linux-arm64.zip -Force
+    - run: Write-Host "$CurrentVersion"
+    
+    - name: upload linux artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: C:\Remotely_Server_Linux-x64.zip
+        asset_name: Remotely_Server_Linux-x64.zip
+        asset_content_type: application/zip
+        
+    - name: upload linux artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: C:\Remotely_Server_Linux-arm64.zip
+        asset_name: Remotely_Server_Linux-arm64.zip
+        asset_content_type: application/zip				 
+  
+  
