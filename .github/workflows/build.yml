@@ -69,7 +69,7 @@ jobs:
         with:
           path: ./Agent/bin/Remotely-MacOS-x64.zip
           name: Mac-Agent-x64
-		  
+
       - name: Publish macOS arm64 Agent
         shell: pwsh
         run: |
@@ -88,7 +88,6 @@ jobs:
           path: ./Agent/bin/Remotely-MacOS-arm64.zip
           name: Mac-Agent-arm64	
 
-     	  
      
   build-windows:
 
@@ -113,7 +112,7 @@ jobs:
         #repository: immense/Remotely
         submodules: recursive
         fetch-depth: 0 
-		
+
     # Install the .NET Core workload
     - name: Install .NET Core
       uses: actions/setup-dotnet@v1.9.0
