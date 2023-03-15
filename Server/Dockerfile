@@ -1,4 +1,5 @@
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-jammy
+ARG TARGETARCH
 
 EXPOSE 5000
 
@@ -20,10 +21,21 @@ RUN \
 RUN \
   mkdir -p /var/www/remotely && \
   mkdir /config && \
-  arch=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/x64/) && \
-  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${arch}.zip && \
-  unzip -o Remotely_Server_Linux-${arch}.zip -d /var/www/remotely && \
+  case ${TARGETARCH} in \
+            "amd64")  S6_ARCH=amd64  ;; \
+            "arm64")  S6_ARCH=aarch64  ;; \
+        esac \
+  && wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${S6_ARCH}.zip && \
+  unzip -o Remotely_Server_Linux-${S6_ARCH}.zip -d /var/www/remotely && \
   rm Remotely_Server_Linux-${arch}.zip
+  
+#RUN \
+#  mkdir -p /var/www/remotely && \
+#  mkdir /config && \
+#  arch=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/x64/) && \
+#  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${arch}.zip && \
+#  unzip -o Remotely_Server_Linux-${arch}.zip -d /var/www/remotely && \
+#  rm Remotely_Server_Linux-${arch}.zip
 
 
 RUN \
