@@ -34,12 +34,12 @@ jobs:
   
     steps:
       - name: Checkout
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@v3.5.3
         with:
           submodules: recursive
 
       - name: Install .NET Core
-        uses: actions/setup-dotnet@v3.0.3
+        uses: actions/setup-dotnet@v3.2.0
         with:
           dotnet-version: 7
         
@@ -71,7 +71,7 @@ jobs:
           Compress-Archive -Path "./Agent/bin/publish/*" -DestinationPath "./Agent/bin/Remotely-MacOS-x64.zip" -Force
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           path: ./Agent/bin/Remotely-MacOS-x64.zip
           name: Mac-Agent-x64
@@ -92,7 +92,7 @@ jobs:
     steps:
        
     - name: Checkout
-      uses: actions/checkout@v3.5.2
+      uses: actions/checkout@v3.5.3
       with:
         # Comment out the below 'repository' line if you want to build from
         # your fork instead of the author's.
@@ -102,13 +102,13 @@ jobs:
         
     # Install the .NET Core workload
     - name: Install .NET Core
-      uses: actions/setup-dotnet@v3.0.3
+      uses: actions/setup-dotnet@v3.2.0
       with:
         dotnet-version: 7
       
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v1.3.1
 
     # Execute all unit tests in the solution
     - name: Execute unit tests
@@ -148,7 +148,7 @@ jobs:
         
         
     - name: Download macOS x64 Agent
-      uses: actions/download-artifact@v2.1.1
+      uses: actions/download-artifact@v3.0.2
       with:
         name: Mac-Agent-x64
         path: ./Server/wwwroot/Content/
