@@ -16,7 +16,7 @@
 # Once your branch has been updated, you can run this workflow again
 # to build the latest version.
 
-name: Build
+name: Build with ARM64 Support
 
 on:
   workflow_dispatch:
