@@ -1,28 +1,51 @@
 FROM mcr.microsoft.com/dotnet/aspnet:7.0-jammy
 
-SHELL ["/bin/bash", "-c"]
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG TARGETVARIANT
 
 EXPOSE 5000
 
 ENV ASPNETCORE_ENVIRONMENT="Production"
 ENV ASPNETCORE_URLS="http://*:5000"
 
-COPY /_immense.Remotely/Server/DockerMain.sh /src/DockerMain.sh
-COPY /_immense.Remotely/Server/linux-x64/Server /app
-
 WORKDIR /app
 
 RUN \
   apt-get -y update && \
-  apt-get -y install curl && \
+  apt-get -y install \
+  apt-utils \
+  wget \
+  apt-transport-https \
+  unzip \
+  acl \
+  curl \
+  libssl1.0
+
+RUN \
+  if [ "$TARGETARCH" = "amd64" ]; \
+    then export ARCH=x64; \
+    else export ARCH=$TARGETARCH; \
+    fi; \
+  mkdir -p /var/www/remotely && \
+  mkdir /config && \
+  wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${ARCH}.zip && \
+  unzip -o Remotely_Server_Linux-${ARCH}.zip -d /app && \
+  rm Remotely_Server_Linux-${ARCH}.zip
+
+
+RUN \
   mkdir -p /remotely-data && \
-  sed -i 's/DataSource=Remotely.db/DataSource=\/remotely-data\/Remotely.db/' /app/appsettings.json
+  sed -i 's/DataSource=Remotely.db/DataSource=\/remotely-data\/Remotely.db/' ./appsettings.json
 
 VOLUME "/remotely-data"
 
-RUN chmod +x "/src/DockerMain.sh"
+WORKDIR /app
 
-ENTRYPOINT ["/src/DockerMain.sh"]
+COPY DockerMain.sh /
 
-HEALTHCHECK --interval=5m --timeout=3s \
-  CMD curl -f http://localhost:5000/api/healthcheck || exit 1
+RUN chmod 755 /DockerMain.sh
+
+ENTRYPOINT ["/DockerMain.sh"]
+HEALTHCHECK CMD curl --fail http://localhost:5000/ || exit 1
+
