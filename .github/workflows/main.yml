@@ -2,9 +2,10 @@ name: GitHub Actions Version Updater
 
 # Controls when the action will run.
 on:
-  schedule:
+  workflow_dispatch:
+  #schedule:
     # Automatically run on every Sunday
-    - cron:  '0 0 * * FRI'
+   # - cron:  '0 0 * * FRI'
 
 jobs:
   build:
