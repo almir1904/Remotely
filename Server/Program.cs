@@ -1,13 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -17,26 +14,24 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 using Remotely.Server.Areas.Identity;
 using Remotely.Server.Auth;
 using Remotely.Server.Data;
 using Remotely.Server.Hubs;
 using Remotely.Server.Services;
-using Remotely.Shared.Models;
 using System.IO;
 using System.Linq;
 using System.Net;
-using Remotely.Shared.Utilities;
 using Immense.RemoteControl.Server.Extensions;
 using Remotely.Server.Services.RcImplementations;
-using Immense.RemoteControl.Server.Abstractions;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Remotely.Shared.Services;
 using System;
-using Immense.RemoteControl.Server.Services;
 using Serilog;
-using Nihs.SimpleMessenger;
+using Microsoft.AspNetCore.RateLimiting;
+using RatePolicyNames = Remotely.Server.RateLimiting.PolicyNames;
+using Remotely.Shared.Entities;
+using Immense.SimpleMessenger;
+using Remotely.Server.Services.Stores;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -53,40 +48,23 @@ if (OperatingSystem.IsWindows() &&
     builder.Logging.AddEventLog();
 }
 
-var dbProvider = configuration["ApplicationOptions:DBProvider"].ToLower();
+var dbProvider = configuration["ApplicationOptions:DBProvider"]?.ToLower();
+if (string.IsNullOrWhiteSpace(dbProvider))
+{
+    throw new InvalidOperationException("DBProvider is missing from appsettings.json.");
+}
+
 if (dbProvider == "sqlite")
 {
-    services.AddDbContext<AppDb, SqliteDbContext>(options =>
-    {
-        options.UseSqlite(configuration.GetConnectionString("SQLite"));
-    });
+    services.AddDbContext<AppDb, SqliteDbContext>();
 }
 else if (dbProvider == "sqlserver")
 {
-    services.AddDbContext<AppDb, SqlServerDbContext>(options =>
-    {
-        options.UseSqlServer(configuration.GetConnectionString("SQLServer"));
-    });
+    services.AddDbContext<AppDb, SqlServerDbContext>();
 }
 else if (dbProvider == "postgresql")
 {
-    services.AddDbContext<AppDb, PostgreSqlDbContext>(options =>
-    {
-        // Password should be set in User Secrets in dev environment.
-        // See https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-3.1
-        if (!string.IsNullOrWhiteSpace(configuration.GetValue<string>("PostgresPassword")))
-        {
-            var connectionBuilder = new NpgsqlConnectionStringBuilder(configuration.GetConnectionString("PostgreSQL"))
-            {
-                Password = configuration["PostgresPassword"]
-            };
-            options.UseNpgsql(connectionBuilder.ConnectionString);
-        }
-        else
-        {
-            options.UseNpgsql(configuration.GetConnectionString("PostgreSQL"));
-        }
-    });
+    services.AddDbContext<AppDb, PostgreSqlDbContext>();
 }
 
 services.AddIdentity<RemotelyUser, IdentityRole>(options =>
@@ -191,7 +169,21 @@ services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Remotely API", Version = "v1" });
 });
 
+services.AddRateLimiter(options =>
+{
+    options.AddConcurrencyLimiter(RatePolicyNames.AgentUpdateDownloads, clOptions =>
+    {
+        clOptions.QueueLimit = int.MaxValue;
 
+        var concurrentPermits = configuration.GetSection("ApplicationOptions:MaxConcurrentUpdates").Get<int>();
+        if (concurrentPermits <= 0)
+        {
+            concurrentPermits = 10;
+        }
+
+        clOptions.PermitLimit = concurrentPermits;
+    });
+});
 services.AddHttpClient();
 services.AddLogging();
 services.AddScoped<IEmailSenderEx, EmailSenderEx>();
@@ -213,24 +205,32 @@ services.AddScoped<ILoaderService, LoaderService>();
 services.AddScoped(x => (CircuitHandler)x.GetRequiredService<ICircuitConnection>());
 services.AddSingleton<ICircuitManager, CircuitManager>();
 services.AddScoped<IAuthService, AuthService>();
-services.AddScoped<IClientAppState, ClientAppState>();
+services.AddScoped<ISelectedCardsStore, SelectedCardsStore>();
 services.AddScoped<IExpiringTokenService, ExpiringTokenService>();
 services.AddScoped<IScriptScheduleDispatcher, ScriptScheduleDispatcher>();
 services.AddSingleton<IOtpProvider, OtpProvider>();
 services.AddSingleton<IEmbeddedServerDataSearcher, EmbeddedServerDataSearcher>();
 services.AddSingleton<ILogsManager, LogsManager>();
-services.AddScoped<IMessenger>((services) => new WeakReferenceMessenger());
+services.AddScoped<IThemeProvider, ThemeProvider>();
+services.AddScoped<IChatSessionStore, ChatSessionStore>();
+services.AddScoped<ITerminalStore, TerminalStore>();
+services.AddSingleton(WeakReferenceMessenger.Default);
 
 services.AddRemoteControlServer(config =>
 {
     config.AddHubEventHandler<HubEventHandler>();
     config.AddViewerAuthorizer<ViewerAuthorizer>();
     config.AddViewerPageDataProvider<ViewerPageDataProvider>();
+    config.AddViewerOptionsProvider<ViewerOptionsProvider>();
+    config.AddSessionRecordingSink<SessionRecordingSink>();
 });
 
 services.AddSingleton<IAgentHubSessionCache, AgentHubSessionCache>();
 
 var app = builder.Build();
+
+app.UseRateLimiter();
+
 var appConfig = app.Services.GetRequiredService<IApplicationConfig>();
 
 if (appConfig.UseHttpLogging)
@@ -248,11 +248,11 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error");
-    if (bool.Parse(app.Configuration["ApplicationOptions:UseHsts"]))
+    if (bool.TryParse(app.Configuration["ApplicationOptions:UseHsts"], out var hsts) && hsts)
     {
         app.UseHsts();
     }
-    if (bool.Parse(app.Configuration["ApplicationOptions:RedirectToHttps"]))
+    if (bool.TryParse(app.Configuration["ApplicationOptions:RedirectToHttps"], out var redirect) && redirect)
     {
         app.UseHttpsRedirection();
     }
@@ -288,11 +288,11 @@ using (var scope = app.Services.CreateScope())
 
     if (context.Database.IsRelational())
     {
-        context.Database.Migrate();
+        await context.Database.MigrateAsync();
     }
 
     await dataService.SetAllDevicesNotOnline();
-    dataService.CleanupOldRecords();
+    await dataService.CleanupOldRecords();
 }
 
 await app.RunAsync();

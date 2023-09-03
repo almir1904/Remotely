@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Hosting
 @using Microsoft.Extensions.Logging 
 
-@inject AuthenticationStateProvider AuthProvider
+@inject IAuthService Auth
 @inject IDataService DataService
 @inject UserManager<RemotelyUser> UserManager
 @inject IWebHostEnvironment HostEnv
@@ -65,9 +65,9 @@
             <p>
                 <a target="_blank" href="/API/ClientDownloads/WindowsInstaller">Windows Installer (x64/x86)</a>
                 <br />
-                <a target="_blank" href="/Content/Remotely-Win10-x64.zip">Windows x64 Files Only</a>
+                <a target="_blank" href="/Content/Remotely-Win-x64.zip">Windows x64 Files Only</a>
                 <br />
-                <a target="_blank" href="/Content/Remotely-Win10-x86.zip">Windows x86 Files Only</a>
+                <a target="_blank" href="/Content/Remotely-Win-x86.zip">Windows x86 Files Only</a>
             </p>
 
             <p>
@@ -95,7 +95,7 @@
                     -quiet
                     -organizationid "0b3d706b-9c5d-41e6-8ae9-5720d16324e6"
                     -serverurl "https://remotely.mytechshop.com"
-                    -path "[path]\Remotely-Win10-x64.zip"
+                    -path "[path]\Remotely-Win-x64.zip"
                 </code>
             </p>
             <p>
@@ -174,24 +174,30 @@
 </div>
 
 @code {
-    private string _organizationId;
+    private string? _organizationId;
     private bool _isAuthenticated;
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync();
-
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        _isAuthenticated = authState.User.Identity.IsAuthenticated;
+        _isAuthenticated = await Auth.IsAuthenticated();
 
         if (_isAuthenticated)
         {
-            var currentUser = await DataService.GetUserAsync(authState.User.Identity.Name);
-            _organizationId = currentUser.OrganizationID;
+            var userResult = await Auth.GetUser();
+            if (userResult.IsSuccess)
+            {
+                _organizationId = userResult.Value.OrganizationID;
+            }
         }
         else
         {
-            _organizationId = (await DataService.GetDefaultOrganization())?.ID;
+            var orgResult = await DataService.GetDefaultOrganization();
+            if (orgResult.IsSuccess)
+            {
+                _organizationId = orgResult.Value.ID;
+            }
         }
+
+        await base.OnInitializedAsync();
     }
 }

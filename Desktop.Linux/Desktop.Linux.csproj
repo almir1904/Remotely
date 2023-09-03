@@ -31,6 +31,7 @@
     <Description>Desktop client for allowing your IT admin to provide remote support.</Description>
     <Copyright>Copyright © 2023 Immense Networks</Copyright>
     <PackageProjectUrl>https://remotely.one</PackageProjectUrl>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <Compile Update="**\*.xaml.cs">
@@ -56,7 +57,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Desktop.Shared\Desktop.Shared.csproj" />
+    <ProjectReference Include="..\submodules\Immense.RemoteControl\Immense.RemoteControl.Desktop.Linux\Immense.RemoteControl.Desktop.Linux.csproj" />
     <ProjectReference Include="..\submodules\Immense.RemoteControl\Immense.RemoteControl.Desktop.Shared\Immense.RemoteControl.Desktop.Shared.csproj" />
-    <ProjectReference Include="..\submodules\Immense.RemoteControl\Immense.RemoteControl.Desktop\Immense.RemoteControl.Desktop.csproj" />
+    <ProjectReference Include="..\submodules\Immense.RemoteControl\Immense.RemoteControl.Desktop.UI\Immense.RemoteControl.Desktop.UI.csproj" />
   </ItemGroup>
 </Project>

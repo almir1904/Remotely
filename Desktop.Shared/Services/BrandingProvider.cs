@@ -3,130 +3,128 @@ using Immense.RemoteControl.Desktop.Shared.Services;
 using Immense.RemoteControl.Shared;
 using Immense.RemoteControl.Shared.Models;
 using Microsoft.Extensions.Logging;
-using Remotely.Shared;
-using Remotely.Shared.Enums;
-using Remotely.Shared.Models;
+using Remotely.Shared.Entities;
 using Remotely.Shared.Services;
-using Remotely.Shared.Utilities;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Remotely.Desktop.Shared.Services
+namespace Desktop.Shared.Services;
+
+public class BrandingProvider : IBrandingProvider
 {
-    public class BrandingProvider : IBrandingProvider
+    private readonly IAppState _appState;
+    private readonly IEmbeddedServerDataSearcher _embeddedDataSearcher;
+    private readonly ILogger<BrandingProvider> _logger;
+    private readonly IOrganizationIdProvider _orgIdProvider;
+    private BrandingInfoBase? _brandingInfo;
+
+
+    public BrandingProvider(
+        IAppState appState,
+        IOrganizationIdProvider orgIdProvider,
+        IEmbeddedServerDataSearcher embeddedServerDataSearcher,
+        ILogger<BrandingProvider> logger)
     {
-        private readonly IAppState _appState;
-        private readonly IOrganizationIdProvider _orgIdProvider;
-        private readonly IEmbeddedServerDataSearcher _embeddedDataSearcher;
-        private readonly ILogger<BrandingProvider> _logger;
-        private BrandingInfoBase _brandingInfo = new()
-        {
-            Product = "Remote Control"
-        };
+        _appState = appState;
+        _orgIdProvider = orgIdProvider;
+        _embeddedDataSearcher = embeddedServerDataSearcher;
+        _logger = logger;
+    }
 
-        public BrandingProvider(
-            IAppState appState, 
-            IOrganizationIdProvider orgIdProvider, 
-            IEmbeddedServerDataSearcher embeddedServerDataSearcher,
-            ILogger<BrandingProvider> logger)
+    public BrandingInfoBase CurrentBranding => _brandingInfo ??
+        throw new InvalidOperationException("Branding info has not been set or initialized.");
+
+    public async Task Initialize()
+    {
+        if (_brandingInfo is not null)
         {
-            _appState = appState;
-            _orgIdProvider = orgIdProvider;
-            _embeddedDataSearcher = embeddedServerDataSearcher;
-            _logger = logger;
+            return;
         }
 
-        public async Task<BrandingInfoBase> GetBrandingInfo()
+        var result = await TryGetBrandingInfo();
+
+        if (result.IsSuccess)
         {
-            var result = await TryGetBrandingInfo();
-
-            if (result.IsSuccess)
+            _brandingInfo = result.Value;
+        }
+        else
+        {
+            _logger.LogWarning(result.Exception, "Failed to extract embedded service data.");
+            _brandingInfo = new()
             {
-                _brandingInfo = result.Value;
-            }
-            else
-            {
-                _logger.LogWarning(result.Exception, "Failed to extract embedded service data.");
-            }
-
-            if (!_brandingInfo.Icon.Any())
-            {
-                using var mrs = typeof(BrandingProvider).Assembly.GetManifestResourceStream("Desktop.Shared.Assets.Remotely_Icon.png");
-                using var ms = new MemoryStream();
-                mrs!.CopyTo(ms);
-
-                _brandingInfo.Icon = ms.ToArray();
-            }
-            return _brandingInfo;
+                Product = "Remote Control"
+            };
         }
 
-        public void SetBrandingInfo(BrandingInfoBase brandingInfo)
+        if (_brandingInfo.Icon?.Any() != true)
         {
-            _brandingInfo = brandingInfo;
+            using var mrs = typeof(BrandingProvider).Assembly.GetManifestResourceStream("Desktop.Shared.Assets.Remotely_Icon.png");
+            using var ms = new MemoryStream();
+            mrs!.CopyTo(ms);
+
+            _brandingInfo.Icon = ms.ToArray();
         }
+    }
 
-        private async Task<Result<BrandingInfo>> TryGetBrandingInfo()
+    public void SetBrandingInfo(BrandingInfoBase brandingInfo)
+    {
+        _brandingInfo = brandingInfo;
+    }
+
+    private async Task<Result<BrandingInfo>> TryGetBrandingInfo()
+    {
+        try
         {
-            try
+            if (string.IsNullOrWhiteSpace(_orgIdProvider.OrganizationId) ||
+                string.IsNullOrWhiteSpace(_appState.Host))
             {
-                if (string.IsNullOrWhiteSpace(_orgIdProvider.OrganizationId) ||
-                    string.IsNullOrWhiteSpace(_appState.Host))
+                var filePath = Process.GetCurrentProcess()?.MainModule?.FileName;
+
+                if (string.IsNullOrWhiteSpace(filePath))
                 {
-                    var filePath = Process.GetCurrentProcess()?.MainModule?.FileName;
-
-                    if (string.IsNullOrWhiteSpace(filePath))
-                    {
-                        return Result.Fail<BrandingInfo>("Failed to retrieve executing file name.");
-                    }
-
-                    var result = await _embeddedDataSearcher.TryGetEmbeddedData(filePath);
-
-                    if (!result.IsSuccess)
-                    {
-                        return result.HadException ?
-                            Result.Fail<BrandingInfo>(result.Exception) :
-                            Result.Fail<BrandingInfo>(result.Reason);
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(result.Value.OrganizationId))
-                    {
-                        _orgIdProvider.OrganizationId = result.Value.OrganizationId;
-                    }
-
-                    if (result.Value.ServerUrl is not null)
-                    {
-                        _appState.Host = result.Value.ServerUrl.AbsoluteUri;
-                    }
+                    return Result.Fail<BrandingInfo>("Failed to retrieve executing file name.");
                 }
 
-                if (string.IsNullOrWhiteSpace(_appState.Host))
+                var result = await _embeddedDataSearcher.TryGetEmbeddedData(filePath);
+
+                if (!result.IsSuccess)
                 {
-                    return Result.Fail<BrandingInfo>("ServerUrl is empty.");
+                    return result.HadException ?
+                        Result.Fail<BrandingInfo>(result.Exception) :
+                        Result.Fail<BrandingInfo>(result.Reason);
                 }
 
-                using var httpClient = new HttpClient();
-
-                var brandingUrl = $"{_appState.Host.TrimEnd('/')}/api/branding/{_orgIdProvider.OrganizationId}";
-                var httpResult = await httpClient.GetFromJsonAsync<BrandingInfo>(brandingUrl).ConfigureAwait(false);
-                if (httpResult is null)
+                if (!string.IsNullOrWhiteSpace(result.Value.OrganizationId))
                 {
-                    return Result.Fail<BrandingInfo>("Branding API HTTP result is null.");
+                    _orgIdProvider.OrganizationId = result.Value.OrganizationId;
                 }
 
-                return Result.Ok(httpResult);
+                if (result.Value.ServerUrl is not null)
+                {
+                    _appState.Host = result.Value.ServerUrl.AbsoluteUri;
+                }
             }
-            catch (Exception ex)
+
+            if (string.IsNullOrWhiteSpace(_appState.Host))
             {
-                _logger.LogError(ex, "Failed to get branding info.");
-                return Result.Fail<BrandingInfo>(ex);
+                return Result.Fail<BrandingInfo>("ServerUrl is empty.");
             }
+
+            using var httpClient = new HttpClient();
+
+            var brandingUrl = $"{_appState.Host.TrimEnd('/')}/api/branding/{_orgIdProvider.OrganizationId}";
+            var httpResult = await httpClient.GetFromJsonAsync<BrandingInfo>(brandingUrl).ConfigureAwait(false);
+            if (httpResult is null)
+            {
+                return Result.Fail<BrandingInfo>("Branding API HTTP result is null.");
+            }
+
+            return Result.Ok(httpResult);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get branding info.");
+            return Result.Fail<BrandingInfo>(ex);
         }
     }
 }

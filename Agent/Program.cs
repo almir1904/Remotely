@@ -17,14 +17,12 @@ using Remotely.Agent.Services.Windows;
 using Microsoft.Extensions.Hosting;
 using System.Linq;
 using Microsoft.Win32;
+using System.Reflection;
 
 namespace Remotely.Agent;
 
 public class Program
 {
-    [Obsolete("Remove this when all services are in DI behind interfaces.")]
-    public static IServiceProvider Services { get; set; }
-
     public static async Task Main(string[] args)
     {
         try
@@ -38,8 +36,6 @@ public class Program
 
             await host.StartAsync();
 
-            Services = host.Services;
-
             await Init(host.Services);
 
             await host.WaitForShutdownAsync();
@@ -47,7 +43,8 @@ public class Program
         catch (Exception ex)
         {
             var version = AppVersionHelper.GetAppVersion();
-            var logger = new FileLogger("Remotely_Agent", version, "Main");
+            var componentName = Assembly.GetExecutingAssembly().GetName().Name;
+            var logger = new FileLogger($"{componentName}", version, "Main");
             logger.LogError(ex, "Error during agent startup.");
             throw;
         }
@@ -75,6 +72,8 @@ public class Program
         {
             SetSas(services, logger);
         }
+
+        // TODO: Move this to a BackgroundService.
         await services.GetRequiredService<IUpdater>().BeginChecking();
         await services.GetRequiredService<IAgentHubConnection>().Connect();
     }
@@ -86,40 +85,42 @@ public class Program
         {
             builder.AddConsole().AddDebug();
             var version = AppVersionHelper.GetAppVersion();
-            builder.AddProvider(new FileLoggerProvider("Remotely_Agent", version));
+            var componentName = Assembly.GetExecutingAssembly().GetName().Name;
+            builder.AddProvider(new FileLoggerProvider($"{componentName}", version));
         });
 
-        // TODO: All these should be registered as interfaces.
         services.AddSingleton<IAgentHubConnection, AgentHubConnection>();
         services.AddSingleton<ICpuUtilizationSampler, CpuUtilizationSampler>();
         services.AddSingleton<IWakeOnLanService, WakeOnLanService>();
         services.AddHostedService(services => services.GetRequiredService<ICpuUtilizationSampler>());
-        services.AddScoped<IChatClientService, ChatClientService>();
-        services.AddTransient<IPSCore, PSCore>();
+        services.AddSingleton<IChatClientService, ChatClientService>();
+        services.AddTransient<IPsCoreShell, PsCoreShell>();
         services.AddTransient<IExternalScriptingShell, ExternalScriptingShell>();
-        services.AddScoped<IConfigService, ConfigService>();
-        services.AddScoped<IUninstaller, Uninstaller>();
-        services.AddScoped<IScriptExecutor, ScriptExecutor>();
-        services.AddScoped<IProcessInvoker, ProcessInvoker>();
-        services.AddScoped<IUpdateDownloader, UpdateDownloader>();
+        services.AddSingleton<IConfigService, ConfigService>();
+        services.AddSingleton<IUninstaller, Uninstaller>();
+        services.AddSingleton<IScriptExecutor, ScriptExecutor>();
+        services.AddSingleton<IProcessInvoker, ProcessInvoker>();
+        services.AddSingleton<IUpdateDownloader, UpdateDownloader>();
+        services.AddSingleton<IFileLogsManager, FileLogsManager>();
+        services.AddSingleton<IScriptingShellFactory, ScriptingShellFactory>();
 
         if (OperatingSystem.IsWindows())
         {
-            services.AddScoped<IAppLauncher, AppLauncherWin>();
+            services.AddSingleton<IAppLauncher, AppLauncherWin>();
             services.AddSingleton<IUpdater, UpdaterWin>();
             services.AddSingleton<IDeviceInformationService, DeviceInfoGeneratorWin>();
             services.AddSingleton<IElevationDetector, ElevationDetectorWin>();
         }
         else if (OperatingSystem.IsLinux())
         {
-            services.AddScoped<IAppLauncher, AppLauncherLinux>();
+            services.AddSingleton<IAppLauncher, AppLauncherLinux>();
             services.AddSingleton<IUpdater, UpdaterLinux>();
             services.AddSingleton<IDeviceInformationService, DeviceInfoGeneratorLinux>();
             services.AddSingleton<IElevationDetector, ElevationDetectorLinux>();
         }
         else if (OperatingSystem.IsMacOS())
         {
-            services.AddScoped<IAppLauncher, AppLauncherMac>();
+            services.AddSingleton<IAppLauncher, AppLauncherMac>();
             services.AddSingleton<IUpdater, UpdaterMac>();
             services.AddSingleton<IDeviceInformationService, DeviceInfoGeneratorMac>();
         }
@@ -151,7 +152,7 @@ public class Program
     private static void SetWorkingDirectory()
     {
         var exePath = Environment.ProcessPath ?? Environment.GetCommandLineArgs().First();
-        var exeDir = Path.GetDirectoryName(exePath);
+        var exeDir = Path.GetDirectoryName(exePath) ?? AppDomain.CurrentDomain.BaseDirectory;
         Directory.SetCurrentDirectory(exeDir);
     }
 }
