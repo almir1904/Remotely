@@ -34,7 +34,7 @@ jobs:
   
     steps:
       - name: Checkout
-        uses: actions/checkout@v3.6.0
+        uses: actions/checkout@v4.0.0
         with:
           submodules: recursive
 
@@ -71,7 +71,7 @@ jobs:
           Compress-Archive -Path "./Agent/bin/publish/*" -DestinationPath "./Agent/bin/Remotely-MacOS-x64.zip" -Force
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v3.1.3
         with:
           path: ./Agent/bin/Remotely-MacOS-x64.zip
           name: Mac-Agent-x64
@@ -92,7 +92,7 @@ jobs:
     steps:
        
     - name: Checkout
-      uses: actions/checkout@v3.6.0
+      uses: actions/checkout@v4.0.0
       with:
         # Comment out the below 'repository' line if you want to build from
         # your fork instead of the author's.
@@ -161,7 +161,7 @@ jobs:
         
     # Upload build artifact to be deployed from Ubuntu runner
     - name: Upload build artifact
-      uses: actions/upload-artifact@v3.1.2
+      uses: actions/upload-artifact@v3.1.3
       with:
         path: ./publish/
         name: Server
