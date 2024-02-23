@@ -6,7 +6,7 @@ ARG TARGETVARIANT
 
 EXPOSE ${ASPNETCORE_HTTP_PORTS}
 
-RUN apt -y update && apt -y install curl
+RUN apt -y update && apt -y install curl wget
 
 RUN \
   if [ "$TARGETARCH" = "amd64" ]; \
