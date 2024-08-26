@@ -34,12 +34,12 @@ jobs:
   
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v4.1.7
         with:
           submodules: recursive
 
       - name: Install .NET Core
-        uses: actions/setup-dotnet@v4.0.0
+        uses: actions/setup-dotnet@v4.0.1
         with:
           dotnet-version: 7
         
@@ -71,7 +71,7 @@ jobs:
           Compress-Archive -Path "./Agent/bin/publish/*" -DestinationPath "./Agent/bin/Remotely-MacOS-x64.zip" -Force
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4.3.1
+        uses: actions/upload-artifact@v4.3.6
         with:
           path: ./Agent/bin/Remotely-MacOS-x64.zip
           name: Mac-Agent-x64
@@ -92,7 +92,7 @@ jobs:
     steps:
        
     - name: Checkout
-      uses: actions/checkout@v4.1.1
+      uses: actions/checkout@v4.1.7
       with:
         # Comment out the below 'repository' line if you want to build from
         # your fork instead of the author's.
@@ -102,7 +102,7 @@ jobs:
         
     # Install the .NET Core workload
     - name: Install .NET Core
-      uses: actions/setup-dotnet@v4.0.0
+      uses: actions/setup-dotnet@v4.0.1
       with:
         dotnet-version: 7
       
@@ -148,7 +148,7 @@ jobs:
         
         
     - name: Download macOS x64 Agent
-      uses: actions/download-artifact@v4.1.2
+      uses: actions/download-artifact@v4.1.8
       with:
         name: Mac-Agent-x64
         path: ./Server/wwwroot/Content/
@@ -161,7 +161,7 @@ jobs:
         
     # Upload build artifact to be deployed from Ubuntu runner
     - name: Upload build artifact
-      uses: actions/upload-artifact@v4.3.1
+      uses: actions/upload-artifact@v4.3.6
       with:
         path: ./publish/
         name: Server
