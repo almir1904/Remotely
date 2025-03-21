@@ -111,13 +111,52 @@ jobs:
           name: Mac-Agent-arm64
           path: ./Server/wwwroot/Content/
           
+      # Fix libman package resolution issues
+      - name: Setup libman and restore packages
+        run: |
+          # Install libman CLI
+          dotnet tool install -g Microsoft.Web.LibraryManager.Cli
+          
+          # Check and display original libman.json
+          echo "Original libman.json content:"
+          cat ./Server/libman.json
+          
+          # Try updating provider from unpkg to cdnjs if needed
+          if grep -q "unpkg" ./Server/libman.json; then
+            echo "Updating provider from unpkg to cdnjs..."
+            sed -i 's/"provider": "unpkg"/"provider": "cdnjs"/g' ./Server/libman.json
+            echo "Updated libman.json content:"
+            cat ./Server/libman.json
+          fi
+          
+          # Run libman restore
+          cd ./Server
+          libman restore
+          
+          # If restore fails, try to fetch files manually
+          if [ $? -ne 0 ]; then
+            echo "Trying alternative approach to fetch libraries..."
+            mkdir -p wwwroot/lib/@msgpack/msgpack
+            mkdir -p wwwroot/lib/@microsoft/signalr-protocol-msgpack
+            
+            # Download the latest versions directly
+            curl -L https://unpkg.com/@msgpack/msgpack/dist/msgpack.min.js -o wwwroot/lib/@msgpack/msgpack/msgpack.min.js
+            curl -L https://unpkg.com/@microsoft/signalr-protocol-msgpack/dist/browser/signalr-protocol-msgpack.min.js -o wwwroot/lib/@microsoft/signalr-protocol-msgpack/signalr-protocol-msgpack.min.js
+            
+            echo "Manually downloaded library files:"
+            ls -la wwwroot/lib/@msgpack/msgpack/
+            ls -la wwwroot/lib/@microsoft/signalr-protocol-msgpack/
+          fi
+          
+          cd ..
+      
       - name: Build Linux x64
         run: |
-          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./publishx64/" "./Server/"
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./publishx64/" "./Server/" --no-restore
           
       - name: Build Linux arm64
         run: |
-          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./publisharm64/" "./Server/"
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./publisharm64/" "./Server/" --no-restore
           
       - name: Upload Linux x64 artifact
         uses: actions/upload-artifact@v4
