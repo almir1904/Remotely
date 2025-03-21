@@ -117,50 +117,8 @@ jobs:
           # Install libman CLI
           dotnet tool install -g Microsoft.Web.LibraryManager.Cli
           
-          # Create a backup of original libman.json
-          cp ./Server/libman.json ./Server/libman.json.backup
-          
-          # Update libman.json with correct package configuration
-          cat > ./Server/libman.json << 'EOL'
-{
-  "version": "1.0",
-  "defaultProvider": "cdnjs",
-  "libraries": [
-    {
-      "library": "microsoft-signalr@8.0.7",
-      "destination": "wwwroot/lib/microsoft-signalr/"
-    },
-    {
-      "library": "@msgpack/msgpack@3.1.1",
-      "destination": "wwwroot/lib/msgpack/",
-      "provider": "unpkg",
-      "files": [
-        "dist.es5+umd/msgpack.js",
-        "dist.es5+umd/msgpack.min.js",
-        "dist.es5+umd/msgpack.js.map",
-        "dist.es5+umd/msgpack.min.js.map"
-      ]
-    },
-    {
-      "provider": "unpkg",
-      "library": "@microsoft/signalr-protocol-msgpack@8.0.7",
-      "destination": "wwwroot/lib/microsoft/signalr-protocol-msgpack/",
-      "files": [
-        "dist/browser/signalr-protocol-msgpack.js",
-        "dist/browser/signalr-protocol-msgpack.js.map",
-        "dist/browser/signalr-protocol-msgpack.min.js",
-        "dist/browser/signalr-protocol-msgpack.min.js.map"
-      ]
-    },
-    {
-      "library": "font-awesome@6.5.2",
-      "destination": "wwwroot/lib/fontawesome/"
-    }
-  ]
-}
-EOL
-          
-          echo "Updated libman.json with correct configuration:"
+          # Check and display original libman.json
+          echo "Original libman.json content:"
           cat ./Server/libman.json
           
           # Clean libman cache and restore
@@ -170,19 +128,14 @@ EOL
           echo "Restoring libman packages..."
           libman restore
           
-          # If restore fails, try fallback method
-          if [ $? -ne 0 ]; then
-            echo "Standard restore failed, trying manual approach..."
-            
-            # Create necessary directories
-            mkdir -p wwwroot/lib/msgpack/dist.es5+umd/
-            mkdir -p wwwroot/lib/microsoft/signalr-protocol-msgpack/dist/browser/
-            
-            # Download files directly
-            curl -L https://unpkg.com/@msgpack/msgpack@3.1.1/dist.es5+umd/msgpack.min.js -o wwwroot/lib/msgpack/dist.es5+umd/msgpack.min.js
-            curl -L https://unpkg.com/@microsoft/signalr-protocol-msgpack@8.0.7/dist/browser/signalr-protocol-msgpack.min.js -o wwwroot/lib/microsoft/signalr-protocol-msgpack/dist/browser/signalr-protocol-msgpack.min.js
-            
-            echo "Manually downloaded critical library files"
+          # Update to latest @msgpack/msgpack if needed
+          if grep -q "@msgpack/msgpack@3.0.0-beta2" ./libman.json; then
+            echo "Updating @msgpack/msgpack to latest version 3.1.1..."
+            sed -i 's/"@msgpack\/msgpack@3.0.0-beta2"/"@msgpack\/msgpack@3.1.1"/g' ./libman.json
+            echo "Updated libman.json content:"
+            cat ./libman.json
+            echo "Restoring again with updated version..."
+            libman restore
           fi
           
           cd ..
