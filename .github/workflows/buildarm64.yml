@@ -111,8 +111,8 @@ jobs:
           name: Mac-Agent-arm64
           path: ./Server/wwwroot/Content/
           
-      # Fix libman package resolution issues
-      - name: Setup libman and restore packages
+      # Fix libman package resolution issues with cache cleaning
+      - name: Setup libman and clean cache
         run: |
           # Install libman CLI
           dotnet tool install -g Microsoft.Web.LibraryManager.Cli
@@ -121,42 +121,32 @@ jobs:
           echo "Original libman.json content:"
           cat ./Server/libman.json
           
-          # Try updating provider from unpkg to cdnjs if needed
-          if grep -q "unpkg" ./Server/libman.json; then
-            echo "Updating provider from unpkg to cdnjs..."
-            sed -i 's/"provider": "unpkg"/"provider": "cdnjs"/g' ./Server/libman.json
-            echo "Updated libman.json content:"
-            cat ./Server/libman.json
-          fi
-          
-          # Run libman restore
+          # Clean libman cache and restore
           cd ./Server
+          echo "Cleaning libman cache..."
+          libman cache clean
+          echo "Restoring libman packages..."
           libman restore
           
-          # If restore fails, try to fetch files manually
-          if [ $? -ne 0 ]; then
-            echo "Trying alternative approach to fetch libraries..."
-            mkdir -p wwwroot/lib/@msgpack/msgpack
-            mkdir -p wwwroot/lib/@microsoft/signalr-protocol-msgpack
-            
-            # Download the latest versions directly
-            curl -L https://unpkg.com/@msgpack/msgpack/dist/msgpack.min.js -o wwwroot/lib/@msgpack/msgpack/msgpack.min.js
-            curl -L https://unpkg.com/@microsoft/signalr-protocol-msgpack/dist/browser/signalr-protocol-msgpack.min.js -o wwwroot/lib/@microsoft/signalr-protocol-msgpack/signalr-protocol-msgpack.min.js
-            
-            echo "Manually downloaded library files:"
-            ls -la wwwroot/lib/@msgpack/msgpack/
-            ls -la wwwroot/lib/@microsoft/signalr-protocol-msgpack/
+          # Update to latest @msgpack/msgpack if needed
+          if grep -q "@msgpack/msgpack@3.0.0-beta2" ./libman.json; then
+            echo "Updating @msgpack/msgpack to latest version 3.1.1..."
+            sed -i 's/"@msgpack\/msgpack@3.0.0-beta2"/"@msgpack\/msgpack@3.1.1"/g' ./libman.json
+            echo "Updated libman.json content:"
+            cat ./libman.json
+            echo "Restoring again with updated version..."
+            libman restore
           fi
           
           cd ..
       
       - name: Build Linux x64
         run: |
-          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./publishx64/" "./Server/" --no-restore
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./publishx64/" "./Server/"
           
       - name: Build Linux arm64
         run: |
-          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./publisharm64/" "./Server/" --no-restore
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./publisharm64/" "./Server/"
           
       - name: Upload Linux x64 artifact
         uses: actions/upload-artifact@v4
