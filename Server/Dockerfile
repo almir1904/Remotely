@@ -13,8 +13,8 @@ RUN \
   wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${ARCH}.zip && \
   mkdir -p /temp && \
   unzip -o Remotely_Server_Linux-${ARCH}.zip -d /temp && \
-  cp -R /temp/Remotely_Server_Linux-${ARCH}/* /app/ && \
-  rm -rf /temp Remotely_Server_Linux-${ARCH}.zip
+  mv /temp/Remotely_Server_Linux-${ARCH}/* /app/ && \
+  rm -rf /temp/Remotely_Server_Linux-${ARCH}.zip
   
 WORKDIR /app
 ENTRYPOINT ["dotnet", "Remotely_Server.dll"]
