@@ -12,6 +12,7 @@ RUN \
     fi; \
   wget -q https://github.com/almir1904/remotely/releases/latest/download/Remotely_Server_Linux-${ARCH}.zip && \
   mkdir -p /temp && \
+  mkdir -p /app && \
   unzip -o Remotely_Server_Linux-${ARCH}.zip -d /temp && \
   mv /temp/Remotely_Server_Linux-${ARCH}/* /app/ && \
   rm -rf /temp/Remotely_Server_Linux-${ARCH}.zip
