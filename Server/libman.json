@@ -3,7 +3,7 @@
   "defaultProvider": "jsdelivr",
   "libraries": [
     {
-      "library": "@microsoft-signalr@8.0.7",
+      "library": "@microsoft/signalr@8.0.7",
       "destination": "wwwroot/lib/microsoft-signalr/"
     },
     {
