@@ -16,17 +16,17 @@
 # Once your branch has been updated, you can run this workflow again
 # to build the latest version.
 
-name: Build with ARM64 Support
+name: Build with ARM64
 
 on:
   workflow_dispatch:
     inputs:
       rid:
-        description: 'Server Runtime Identifier (linux-x64, win-x64, etc.)'     
+        description: 'Server Runtime Identifier'     
         required: false
         default: "linux-x64"
       serverUrl:
-        description: 'Server URL (optional)'
+        description: 'Server URL for Windows ARM64 build'
         required: false
 
 jobs:
@@ -49,7 +49,7 @@ jobs:
         
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
-        
+
       # Add caching for faster builds
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -99,7 +99,7 @@ jobs:
      
   build-linux:
     runs-on: ubuntu-latest
-    needs: [build-mac]
+    needs: build-mac
     
     steps:
       - name: Checkout
@@ -144,28 +144,30 @@ jobs:
           
       # Fix libman package resolution issues with cache cleaning
       - name: Setup libman and clean cache
-        shell: bash
         run: |
           # Install libman CLI
           dotnet tool install -g Microsoft.Web.LibraryManager.Cli
           
-          # Backup the original libman.json
-          cp ./Server/libman.json ./Server/libman.json.bak
+          # Check and display original libman.json
+          echo "Original libman.json content:"
+          cat ./Server/libman.json
           
-          # Update to compatible versions
+          # Clean libman cache and restore
           cd ./Server
-          echo "Updating libman.json to use compatible package versions..."
-          sed -i 's/"@msgpack\/msgpack@3.0.0-beta2"/"@msgpack\/msgpack@2.1.0"/g' ./libman.json
-          sed -i 's/"@microsoft\/signalr-protocol-msgpack@[0-9]\+\.[0-9]\+\.[0-9]\+"/"@microsoft\/signalr-protocol-msgpack@6.0.0"/g' ./libman.json
-          
-          echo "Updated libman.json content:"
-          cat ./libman.json
-          
           echo "Cleaning libman cache..."
           libman cache clean
+          echo "Restoring libman packages..."
+          libman restore
           
-          echo "Attempting to restore packages with compatible versions..."
-          libman restore || echo "Libman restore failed, but we can continue with the build"
+          # Update to latest @msgpack/msgpack if needed
+          if grep -q "@msgpack/msgpack@3.0.0-beta2" ./libman.json; then
+            echo "Updating @msgpack/msgpack to latest version 3.1.1..."
+            sed -i 's/"@msgpack\/msgpack@3.0.0-beta2"/"@msgpack\/msgpack@3.1.1"/g' ./libman.json
+            echo "Updated libman.json content:"
+            cat ./libman.json
+            echo "Restoring again with updated version..."
+            libman restore
+          fi
           
           cd ..
       
@@ -191,9 +193,8 @@ jobs:
 
   build-windows:
 
-    runs-on: windows-latest  # For a list of available runner types, refer to
-                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
-    needs: [build-mac]
+    runs-on: windows-latest
+    needs: build-mac
 
     env:
       Solution_Name: Remotely.sln      
@@ -207,9 +208,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        # Comment out the below 'repository' line if you want to build from
-        # your fork instead of the author's.
-        repository: immense/Remotely
         submodules: recursive
         fetch-depth: 0
         
@@ -220,88 +218,12 @@ jobs:
         dotnet-version: 8
       
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
-    - name: Setup MSBuild
+    - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v2
 
-    # Add caching for faster builds
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
-
-    # Setup libman and fix package references before testing
-    - name: Setup libman and clean cache
-      shell: pwsh
-      run: |
-        # Install libman CLI
-        dotnet tool install -g Microsoft.Web.LibraryManager.Cli
-        
-        # Check and display original libman.json
-        Write-Host "Original libman.json content:"
-        Get-Content ./Server/libman.json
-        
-        # Clean libman cache and restore
-        Push-Location ./Server
-        Write-Host "Cleaning libman cache..."
-        libman cache clean
-        
-        # Update to latest @msgpack/msgpack if needed
-        $content = Get-Content -Path ./libman.json -Raw
-        if ($content -match '@msgpack/msgpack@3.0.0-beta2') {
-          Write-Host "Updating @msgpack/msgpack to latest version 3.1.1..."
-          $updatedContent = $content -replace '@msgpack/msgpack@3.0.0-beta2', '@msgpack/msgpack@3.1.1'
-          Set-Content -Path ./libman.json -Value $updatedContent
-        }
-        
-        # Fix SignalR protocol msgpack version if needed
-        if ($content -match '@microsoft/signalr-protocol-msgpack@8.0.7') {
-          Write-Host "Checking signalr-protocol-msgpack version..."
-          # Either update to a working version or remove and re-add after restore
-          $updatedContent = $content -replace '@microsoft/signalr-protocol-msgpack@8.0.7', '@microsoft/signalr-protocol-msgpack@7.0.0'
-          Set-Content -Path ./libman.json -Value $updatedContent
-        }
-        
-        Write-Host "Updated libman.json content:"
-        Get-Content ./libman.json
-        
-        Write-Host "Restoring packages..."
-        libman restore
-        
-        Pop-Location
-
-    # Setup libman and handle package resolution if needed
-    - name: Setup libman for tests
-      shell: pwsh
-      run: |
-        # Install libman CLI
-        dotnet tool install -g Microsoft.Web.LibraryManager.Cli
-        
-        # Make a backup of original libman.json
-        Copy-Item -Path ./Server/libman.json -Destination ./Server/libman.json.bak
-        
-        # Create a modified version with available package versions
-        $libmanContent = Get-Content -Path ./Server/libman.json -Raw
-        
-        # Try to replace with stable versions or remove problematic packages
-        $libmanContent = $libmanContent -replace '@msgpack/msgpack@3.0.0-beta2', '@msgpack/msgpack@2.1.0'
-        $libmanContent = $libmanContent -replace '@microsoft/signalr-protocol-msgpack@\d+\.\d+\.\d+', '@microsoft/signalr-protocol-msgpack@6.0.0'
-        
-        # Write updated content
-        Set-Content -Path ./Server/libman.temp.json -Value $libmanContent
-        
-        Write-Host "Modified libman.json to use compatible packages for testing"
-
-    # Execute selected unit tests that don't depend on problematic packages
+    # Execute all unit tests in the solution
     - name: Execute unit tests
-      run: |
-        # Run tests that don't depend on libman packages
-        dotnet test ./Tests/Shared.Tests/Shared.Tests.csproj --configuration Release
-        
-        # For tests that might depend on libman packages, we can use a filter to exclude them
-        # dotnet test --filter "FullyQualifiedName!~Server.Tests"
+      run: dotnet test
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
@@ -335,91 +257,31 @@ jobs:
 
         Write-Host "Setting current version to $CurrentVersion."
         
+        
     - name: Download macOS x64 Agent
       uses: actions/download-artifact@v4
       with:
         name: Mac-Agent-x64
         path: ./Server/wwwroot/Content/
-        
+
     - name: Download macOS arm64 Agent
       uses: actions/download-artifact@v4
       with:
         name: Mac-Agent-arm64
         path: ./Server/wwwroot/Content/
 
-    # Fix libman package resolution issues before publishing
-    - name: Prepare libman.json for publishing
-      shell: powershell
-      run: |
-        # Check if libman.json exists
-        if (Test-Path -Path ".\Server\libman.json") {
-          Write-Host "Original libman.json content:"
-          Get-Content -Path ".\Server\libman.json"
-          
-          # Create a modified libman.json that won't break the build
-          $libmanContent = Get-Content -Path ".\Server\libman.json" -Raw
-          
-          # Option 1: Comment out problematic libraries to skip them during build
-          $modifiedContent = $libmanContent -replace '(\s+)(\{[\s\S]+?"library": "@msgpack/msgpack@[^"]+[\s\S]+?\})', '$1// DISABLED FOR BUILD:$1$2'
-          $modifiedContent = $modifiedContent -replace '(\s+)(\{[\s\S]+?"library": "@microsoft/signalr-protocol-msgpack@[^"]+[\s\S]+?\})', '$1// DISABLED FOR BUILD:$1$2'
-          
-          # Backup original file
-          Copy-Item -Path ".\Server\libman.json" -Destination ".\Server\libman.json.original"
-          
-          # Write modified content
-          Set-Content -Path ".\Server\libman.json" -Value $modifiedContent
-          
-          Write-Host "Modified libman.json for build:"
-          Get-Content -Path ".\Server\libman.json"
-        }
-        else {
-          Write-Host "libman.json not found in expected location"
-        }
-
-    # Run the Publish script to build Windows x64 clients and server
+    # Run the Publish script to build clients and server.
     - name: Build Windows x64
       shell: powershell
       run: |
-        # Add error handling to continue even if libman fails
-        try {
-          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID win-x64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-x64"
-        }
-        catch {
-          Write-Host "Warning: Publish.ps1 encountered an error, but we'll continue: $_"
-          # Check if the output directory was created - if yes, we can consider it partially successful
-          if (Test-Path -Path "$env:GITHUB_WORKSPACE\publish-win-x64") {
-            Write-Host "Output directory exists, continuing with build..."
-            exit 0
-          }
-          else {
-            Write-Host "Critical failure in build, output directory not created."
-            exit 1
-          }
-        }
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID win-x64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-x64"
         
-    # Build Windows arm64 clients and server
     - name: Build Windows arm64
       shell: powershell
       run: |
-        # Use the same libman.json that was modified for the x64 build
-        # Add error handling to continue even if libman fails
-        try {
-          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname $env:ServerUrl -CurrentVersion $env:CurrentVersion -RID win-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-arm64"
-        }
-        catch {
-          Write-Host "Warning: Publish.ps1 encountered an error, but we'll continue: $_"
-          # Check if the output directory was created - if yes, we can consider it partially successful
-          if (Test-Path -Path "$env:GITHUB_WORKSPACE\publish-win-arm64") {
-            Write-Host "Output directory exists, continuing with build..."
-            exit 0
-          }
-          else {
-            Write-Host "Critical failure in build, output directory not created."
-            exit 1
-          }
-        }
-        
-    # Upload build artifacts 
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname ${{ github.event.inputs.serverUrl }} -CurrentVersion $env:CurrentVersion -RID win-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-arm64"
+
+    # Upload build artifact to be deployed from Ubuntu runner
     - name: Upload Windows x64 artifact
       uses: actions/upload-artifact@v4
       with:
@@ -438,7 +300,7 @@ jobs:
         if (Test-Path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx") {
           Remove-Item -path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx"
         }
-        
+
   create-release:
     runs-on: ubuntu-latest
     needs: [build-mac, build-linux, build-windows]
