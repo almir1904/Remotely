@@ -16,7 +16,7 @@
 # Once your branch has been updated, you can run this workflow again
 # to build the latest version.
 
-name: Build with ARM64 SupportV2
+name: Build with ARM64 Support
 
 on:
   workflow_dispatch:
@@ -233,6 +233,46 @@ jobs:
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
+
+    # Setup libman and fix package references before testing
+    - name: Setup libman and clean cache
+      shell: pwsh
+      run: |
+        # Install libman CLI
+        dotnet tool install -g Microsoft.Web.LibraryManager.Cli
+        
+        # Check and display original libman.json
+        Write-Host "Original libman.json content:"
+        Get-Content ./Server/libman.json
+        
+        # Clean libman cache and restore
+        Push-Location ./Server
+        Write-Host "Cleaning libman cache..."
+        libman cache clean
+        
+        # Update to latest @msgpack/msgpack if needed
+        $content = Get-Content -Path ./libman.json -Raw
+        if ($content -match '@msgpack/msgpack@3.0.0-beta2') {
+          Write-Host "Updating @msgpack/msgpack to latest version 3.1.1..."
+          $updatedContent = $content -replace '@msgpack/msgpack@3.0.0-beta2', '@msgpack/msgpack@3.1.1'
+          Set-Content -Path ./libman.json -Value $updatedContent
+        }
+        
+        # Fix SignalR protocol msgpack version if needed
+        if ($content -match '@microsoft/signalr-protocol-msgpack@8.0.7') {
+          Write-Host "Checking signalr-protocol-msgpack version..."
+          # Either update to a working version or remove and re-add after restore
+          $updatedContent = $content -replace '@microsoft/signalr-protocol-msgpack@8.0.7', '@microsoft/signalr-protocol-msgpack@7.0.0'
+          Set-Content -Path ./libman.json -Value $updatedContent
+        }
+        
+        Write-Host "Updated libman.json content:"
+        Get-Content ./libman.json
+        
+        Write-Host "Restoring packages..."
+        libman restore
+        
+        Pop-Location
 
     # Execute all unit tests in the solution
     - name: Execute unit tests
