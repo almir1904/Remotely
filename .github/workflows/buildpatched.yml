@@ -1,0 +1,361 @@
+# IMPORTANT:
+# 1. The Server Runtime Identifier determines the target operating system
+# for which to build the server.  The default "linux-x64" will usually work
+# for most Linux-based operating systems.  You can see a full list at
+# https://docs.microsoft.com/en-us/dotnet/core/rid-catalog.
+
+# 2. You'll want to keep your fork updated so you can build the latest
+# changes.  On the GitHub page for your repo, you'll see a message that says,
+# "This branch is ## commits behind lucent-sea:master."
+#
+# Click the "Pull request" link next to it.
+#
+# On the next page click the "switching the base" link.  Now it's pulling from
+# my repo into yours.  Create and complete the pull request to update your repo.
+#
+# Once your branch has been updated, you can run this workflow again
+# to build the latest version.
+
+name: Build with ARM64 SupportV2
+
+on:
+  workflow_dispatch:
+    inputs:
+      rid:
+        description: 'Server Runtime Identifier (linux-x64, win-x64, etc.)'     
+        required: false
+        default: "linux-arm64"
+      serverUrl:
+        description: 'Server URL (optional)'
+        required: false
+
+jobs:
+
+  build-mac:
+  
+    runs-on: macos-latest
+  
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8
+        
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+        
+      # Add caching for faster builds
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Set current version
+        shell: pwsh
+        run: |
+          $VersionString = git show -s --format=%ci
+          $VersionDate = [DateTimeOffset]::Parse($VersionString)
+
+          $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
+
+          echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
+
+          Write-Host "Setting current version to $CurrentVersion."
+
+      - name: Publish macOS x64 Agent
+        shell: pwsh
+        run: |
+          Write-Host "Publishing agent with version $env:CurrentVersion"
+          dotnet publish /p:Version=$env:CurrentVersion /p:FileVersion=$env:CurrentVersion --runtime osx-x64 --self-contained --configuration Release --output "./Agent/bin/publish/" "./Agent/"
+          Compress-Archive -Path "./Agent/bin/publish/*" -DestinationPath "./Agent/bin/Remotely-MacOS-x64.zip" -Force
+
+      - name: Upload macOS x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./Agent/bin/Remotely-MacOS-x64.zip
+          name: Mac-Agent-x64
+          
+      - name: Publish macOS arm64 Agent
+        shell: pwsh
+        run: |
+          Write-Host "Publishing agent with version $env:CurrentVersion"
+          dotnet publish /p:Version=$env:CurrentVersion /p:FileVersion=$env:CurrentVersion --runtime osx-arm64 --self-contained --configuration Release --output "./Agent/bin/publish/" "./Agent/"
+          Compress-Archive -Path "./Agent/bin/publish/*" -DestinationPath "./Agent/bin/Remotely-MacOS-arm64.zip" -Force
+          
+      - name: Upload macOS arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./Agent/bin/Remotely-MacOS-arm64.zip
+          name: Mac-Agent-arm64
+     
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: [build-mac]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          
+      - name: Install .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8
+      
+      # Add caching for faster builds
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+            
+      - name: Set current version
+        shell: bash
+        run: |
+          VERSION_STRING=$(git show -s --format=%ci)
+          VERSION_DATE=$(date -d "$VERSION_STRING" +"%Y.%m.%d.%H%M")
+          echo "CurrentVersion=$VERSION_DATE" >> $GITHUB_ENV
+          echo "Setting current version to $VERSION_DATE"
+          
+      - name: Download macOS x64 Agent
+        uses: actions/download-artifact@v4
+        with:
+          name: Mac-Agent-x64
+          path: ./Server/wwwroot/Content/
+
+      - name: Download macOS arm64 Agent
+        uses: actions/download-artifact@v4
+        with:
+          name: Mac-Agent-arm64
+          path: ./Server/wwwroot/Content/
+          
+      # Fix libman package resolution issues with cache cleaning
+      - name: Setup libman and clean cache
+        run: |
+          # Install libman CLI
+          dotnet tool install -g Microsoft.Web.LibraryManager.Cli
+          
+          # Check and display original libman.json
+          echo "Original libman.json content:"
+          cat ./Server/libman.json
+          
+          # Clean libman cache and restore
+          cd ./Server
+          echo "Cleaning libman cache..."
+          libman cache clean
+          echo "Restoring libman packages..."
+          libman restore
+          
+          # Update to latest @msgpack/msgpack if needed
+          if grep -q "@msgpack/msgpack@3.0.0-beta2" ./libman.json; then
+            echo "Updating @msgpack/msgpack to latest version 3.1.1..."
+            sed -i 's/"@msgpack\/msgpack@3.0.0-beta2"/"@msgpack\/msgpack@3.1.1"/g' ./libman.json
+            echo "Updated libman.json content:"
+            cat ./libman.json
+            echo "Restoring again with updated version..."
+            libman restore
+          fi
+          
+          cd ..
+      
+      - name: Build Linux x64
+        run: |
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./publishx64/" "./Server/"
+          
+      - name: Build Linux arm64
+        run: |
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./publisharm64/" "./Server/"
+          
+      - name: Upload Linux x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./publishx64/
+          name: Remotely_Server_Linux-x64
+          
+      - name: Upload Linux arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./publisharm64/
+          name: Remotely_Server_Linux-arm64
+
+  build-windows:
+
+    runs-on: windows-latest  # For a list of available runner types, refer to
+                             # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    needs: [build-mac]
+
+    env:
+      Solution_Name: Remotely.sln      
+      Configuration: Release
+      PfxBase64: ${{ secrets.BASE64_ENCODED_PFX }}
+      PfxKey: ${{ secrets.PFX_KEY }}
+      ServerUrl: ${{ github.event.inputs.serverUrl }}
+
+    steps:
+       
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        # Comment out the below 'repository' line if you want to build from
+        # your fork instead of the author's.
+        repository: immense/Remotely
+        submodules: recursive
+        fetch-depth: 0
+        
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8
+      
+    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    # Add caching for faster builds
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    # Execute all unit tests in the solution
+    - name: Execute unit tests
+      run: dotnet test
+
+    # Restore the application to populate the obj folder with RuntimeIdentifiers
+    - name: Restore the application
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+
+    # Decode the base 64 encoded pfx and save the Signing_Certificate
+    - name: Decode the pfx
+      run: |
+        if (!($env:PfxBase64)) {
+          echo "Skipping cert signing because Base64_Encoded_Pfx secret is missing."
+          return
+        }
+        
+        echo "Creating Pfx for signing assemblies."
+        
+        $pfx_cert_byte = [System.Convert]::FromBase64String($env:PfxBase64)
+        $certificatePath = Join-Path -Path $env:GITHUB_WORKSPACE -ChildPath GitHubActionsWorkflow.pfx
+        echo "Writing file to $certificatePath."
+        [IO.File]::WriteAllBytes($certificatePath, $pfx_cert_byte)
+    
+    # Store the assembly version in an environment variable
+    - name: Set current version
+      shell: powershell
+      run: |
+        $VersionString = git show -s --format=%ci
+        $VersionDate = [DateTimeOffset]::Parse($VersionString)
+        
+        $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
+        
+        echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
+
+        Write-Host "Setting current version to $CurrentVersion."
+        
+    - name: Download macOS x64 Agent
+      uses: actions/download-artifact@v4
+      with:
+        name: Mac-Agent-x64
+        path: ./Server/wwwroot/Content/
+        
+    - name: Download macOS arm64 Agent
+      uses: actions/download-artifact@v4
+      with:
+        name: Mac-Agent-arm64
+        path: ./Server/wwwroot/Content/
+
+    # Run the Publish script to build Windows x64 clients and server
+    - name: Build Windows x64
+      shell: powershell
+      run: |
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID win-x64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-x64"
+        
+    # Build Windows arm64 clients and server
+    - name: Build Windows arm64
+      shell: powershell
+      run: |
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname $env:ServerUrl -CurrentVersion $env:CurrentVersion -RID win-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-arm64"
+        
+    # Upload build artifacts 
+    - name: Upload Windows x64 artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: ./publish-win-x64/
+        name: Remotely_Server_Windows-x64
+        
+    - name: Upload Windows arm64 artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: ./publish-win-arm64/
+        name: Remotely_Server_Windows-arm64
+
+    # Remove the pfx
+    - name: Remove the pfx
+      run: |
+        if (Test-Path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx") {
+          Remove-Item -path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx"
+        }
+        
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-mac, build-linux, build-windows]
+    permissions:
+      contents: write
+        
+    steps:
+      - name: Set current version
+        shell: bash
+        run: |
+          CURRENT_VERSION=$(date +"%Y.%m.%d.%H%M")
+          echo "CurrentVersion=$CURRENT_VERSION" >> $GITHUB_ENV
+          echo "Setting current version to $CURRENT_VERSION"
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          
+      # Compress all artifacts
+      - name: Prepare artifacts
+        run: |
+          cd ./artifacts
+          
+          # Compress each directory into a zip file
+          for dir in */; do
+            dir_name=${dir%/}
+            echo "Compressing $dir_name"
+            zip -r "../$dir_name.zip" "$dir_name"
+          done
+          
+          cd ..
+          ls -la *.zip
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.CurrentVersion }}
+          name: Release ${{ env.CurrentVersion }}
+          draft: false
+          prerelease: false
+          files: |
+            *.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
