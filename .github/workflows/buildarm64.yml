@@ -66,99 +66,6 @@ jobs:
           path: ./Agent/bin/Remotely-MacOS-arm64.zip
           name: Mac-Agent-arm64
 
-  build-linux:
-    runs-on: ubuntu-latest
-    needs: [build-mac]
-    
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          
-      - name: Install .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8
-      
-      # Add caching for faster builds
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-            
-      - name: Set current version
-        shell: bash
-        run: |
-          VERSION_STRING=$(git show -s --format=%ci)
-          VERSION_DATE=$(date -d "$VERSION_STRING" +"%Y.%m.%d.%H%M")
-          echo "CurrentVersion=$VERSION_DATE" >> $GITHUB_ENV
-          echo "Setting current version to $VERSION_DATE"
-          
-      - name: Download macOS x64 Agent
-        uses: actions/download-artifact@v4
-        with:
-          name: Mac-Agent-x64
-          path: ./Server/wwwroot/Content/
-
-      - name: Download macOS arm64 Agent
-        uses: actions/download-artifact@v4
-        with:
-          name: Mac-Agent-arm64
-          path: ./Server/wwwroot/Content/
-          
-      # Fix libman package resolution issues with cache cleaning
-      - name: Setup libman and clean cache
-        run: |
-          # Install libman CLI
-          dotnet tool install -g Microsoft.Web.LibraryManager.Cli
-          
-          # Check and display original libman.json
-          echo "Original libman.json content:"
-          cat ./Server/libman.json
-          
-          # Clean libman cache and restore
-          cd ./Server
-          echo "Cleaning libman cache..."
-          libman cache clean
-          echo "Restoring libman packages..."
-          libman restore
-          
-          # Update to latest @msgpack/msgpack if needed
-          if grep -q "@msgpack/msgpack@3.0.0-beta2" ./libman.json; then
-            echo "Updating @msgpack/msgpack to latest version 3.1.1..."
-            sed -i 's/"@msgpack\/msgpack@3.0.0-beta2"/"@msgpack\/msgpack@3.1.1"/g' ./libman.json
-            echo "Updated libman.json content:"
-            cat ./libman.json
-            echo "Restoring again with updated version..."
-            libman restore
-          fi
-          
-          cd ..
-      
-      - name: Build Linux x64
-        run: |
-          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./publishx64/" "./Server/"
-          
-      - name: Build Linux arm64
-        run: |
-          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./publisharm64/" "./Server/"
-          
-      - name: Upload Linux x64 artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: ./publishx64/
-          name: Remotely_Server_Linux-x64
-          
-      - name: Upload Linux arm64 artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: ./publisharm64/
-          name: Remotely_Server_Linux-arm64
 
   build-windows:
     runs-on: windows-latest
@@ -246,6 +153,16 @@ jobs:
         run: |
           .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname $env:ServerUrl -CurrentVersion $env:CurrentVersion -RID win-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-arm64"
 
+      - name: Build Linux x64
+        shell: powershell
+        run: |
+          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-x64 -OutDir "$env:GITHUB_WORKSPACE\publish-linux-x64"
+
+      - name: Build Linux arm64
+        shell: powershell
+        run: |
+          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-linux-arm64"
+
       - name: Upload Windows x64 artifact
         uses: actions/upload-artifact@v4
         with:
@@ -258,6 +175,18 @@ jobs:
           path: ./publish-win-arm64/
           name: Remotely_Server_Windows-arm64
 
+      - name: Upload Linux x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./publish-linux-x64/
+          name: Remotely_Server_Linux-x64
+
+      - name: Upload Linux arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./publish-linux-arm64/
+          name: Remotely_Server_Linux-arm64
+
       - name: Remove the pfx
         run: |
           if (Test-Path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx") {
@@ -266,7 +195,7 @@ jobs:
 
   create-release:
     runs-on: ubuntu-latest
-    needs: [build-mac, build-linux, build-windows]
+    needs: [build-mac, build-windows]
     permissions:
       contents: write
         
