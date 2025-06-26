@@ -153,16 +153,6 @@ jobs:
         run: |
           .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname $env:ServerUrl -CurrentVersion $env:CurrentVersion -RID win-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-arm64"
 
-      - name: Build Linux x64
-        shell: powershell
-        run: |
-          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-x64 -OutDir "$env:GITHUB_WORKSPACE\publish-linux-x64"
-
-      - name: Build Linux arm64
-        shell: powershell
-        run: |
-          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-linux-arm64"
-
       - name: Upload Windows x64 artifact
         uses: actions/upload-artifact@v4
         with:
@@ -174,6 +164,90 @@ jobs:
         with:
           path: ./publish-win-arm64/
           name: Remotely_Server_Windows-arm64
+
+      - name: Remove the pfx
+        run: |
+          if (Test-Path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx") {
+            Remove-Item -path "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx"
+          }
+
+  build-linux:
+    runs-on: windows-latest
+    needs: [build-windows]
+
+    env:
+      Solution_Name: Remotely.sln
+      Configuration: Release
+      PfxBase64: ${{ secrets.BASE64_ENCODED_PFX }}
+      PfxKey: ${{ secrets.PFX_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Decode the pfx
+        run: |
+          if (!($env:PfxBase64)) {
+            echo "Skipping cert signing because Base64_Encoded_Pfx secret is missing."
+            return
+          }
+
+          echo "Creating Pfx for signing assemblies."
+
+          $pfx_cert_byte = [System.Convert]::FromBase64String($env:PfxBase64)
+          $certificatePath = Join-Path -Path $env:GITHUB_WORKSPACE -ChildPath GitHubActionsWorkflow.pfx
+          echo "Writing file to $certificatePath."
+          [IO.File]::WriteAllBytes($certificatePath, $pfx_cert_byte)
+
+      - name: Set current version
+        shell: powershell
+        run: |
+          $VersionString = git show -s --format=%ci
+          $VersionDate = [DateTimeOffset]::Parse($VersionString)
+          $CurrentVersion = $VersionDate.ToString("yyyy.MM.dd.HHmm")
+          echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
+          Write-Host "Setting current version to $CurrentVersion."
+
+      - name: Download macOS x64 Agent
+        uses: actions/download-artifact@v4
+        with:
+          name: Mac-Agent-x64
+          path: ./Server/wwwroot/Content/
+
+      - name: Download macOS arm64 Agent
+        uses: actions/download-artifact@v4
+        with:
+          name: Mac-Agent-arm64
+          path: ./Server/wwwroot/Content/
+
+      - name: Build Linux x64
+        shell: powershell
+        run: |
+          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-x64 -OutDir "$env:GITHUB_WORKSPACE\publish-linux-x64"
+
+      - name: Build Linux arm64
+        shell: powershell
+        run: |
+          .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID linux-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-linux-arm64"
 
       - name: Upload Linux x64 artifact
         uses: actions/upload-artifact@v4
@@ -195,7 +269,7 @@ jobs:
 
   create-release:
     runs-on: ubuntu-latest
-    needs: [build-mac, build-windows]
+    needs: [build-mac, build-windows, build-linux]
     permissions:
       contents: write
         
