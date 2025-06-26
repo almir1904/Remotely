@@ -239,6 +239,19 @@ jobs:
           name: Mac-Agent-arm64
           path: ./Server/wwwroot/Content/
 
+      - name: Download Windows x64 server package
+        uses: actions/download-artifact@v4
+        with:
+          name: Remotely_Server_Windows-x64
+          path: ./windows-server
+
+      - name: Copy Windows agent archives for Linux build
+        shell: bash
+        run: |
+          mkdir -p ./Server/wwwroot/Content/
+          cp ./windows-server/wwwroot/Content/Remotely-Win-x64.zip ./Server/wwwroot/Content/ || true
+          cp ./windows-server/wwwroot/Content/Remotely-Win-x86.zip ./Server/wwwroot/Content/ || true
+
       - name: Build Linux x64
         shell: powershell
         run: |
