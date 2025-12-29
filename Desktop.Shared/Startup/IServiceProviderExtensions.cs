@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Remotely.Shared.Primitives;
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.Runtime.Versioning;
 using Remotely.Desktop.Native.Windows;
@@ -110,58 +111,21 @@ public static class IServiceProviderExtensions
             var elevateOption = rootCommand.Options.OfType<Option<bool>>().FirstOrDefault(o => o.Aliases.Contains("--elevate")) 
                 ?? throw new InvalidOperationException("Elevate option not found");
 
-            rootCommand.SetHandler(async (
-                string host,
-                AppMode mode,
-                string pipeName,
-                string sessionId,
-                string accessKey,
-                string requesterName,
-                string organizationName,
-                bool relaunch,
-                string viewers,
-                bool elevate) =>
-            {
-                // Validate pipe name when mode is Chat
-                if (mode == AppMode.Chat && string.IsNullOrWhiteSpace(pipeName))
-                {
-                    Console.Error.WriteLine("A pipe name must be specified when AppMode is Chat.");
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                if (string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(serverUri))
-                {
-                    host = serverUri;
-                }
-
-                var result = await services.UseRemoteControlClient(
-                    host ?? string.Empty,
-                    mode,
-                    pipeName ?? string.Empty,
-                    sessionId ?? string.Empty,
-                    accessKey ?? string.Empty,
-                    requesterName ?? string.Empty,
-                    organizationName ?? string.Empty,
-                    relaunch,
-                    viewers ?? string.Empty,
-                    elevate);
-
-                if (result.IsFailure)
-                {
-                    Environment.ExitCode = 1;
-                }
-            },
-            hostOption,
-            modeOption,
-            pipeNameOption,
-            sessionIdOption,
-            accessKeyOption,
-            requesterNameOption,
-            organizationNameOption,
-            relaunchOption,
-            viewersOption,
-            elevateOption);
+            // Create a handler that processes the command
+            var handler = new RemoteControlCommandHandler(
+                services,
+                serverUri,
+                hostOption,
+                modeOption,
+                pipeNameOption,
+                sessionIdOption,
+                accessKeyOption,
+                requesterNameOption,
+                organizationNameOption,
+                relaunchOption,
+                viewersOption,
+                elevateOption);
+            rootCommand.Handler = handler;
 
             rootCommand.TreatUnmatchedTokensAsErrors = treatUnmatchedArgsAsErrors;
 
@@ -204,5 +168,89 @@ public static class IServiceProviderExtensions
             out var procInfo);
         Console.WriteLine($"Elevate result: {result}. Process ID: {procInfo.dwProcessId}.");
         Environment.Exit(0);
+    }
+
+    private class RemoteControlCommandHandler : ICommandHandler
+    {
+        private readonly IServiceProvider _services;
+        private readonly string _serverUri;
+        private readonly Option<string> _hostOption;
+        private readonly Option<AppMode> _modeOption;
+        private readonly Option<string> _pipeNameOption;
+        private readonly Option<string> _sessionIdOption;
+        private readonly Option<string> _accessKeyOption;
+        private readonly Option<string> _requesterNameOption;
+        private readonly Option<string> _organizationNameOption;
+        private readonly Option<bool> _relaunchOption;
+        private readonly Option<string> _viewersOption;
+        private readonly Option<bool> _elevateOption;
+
+        public RemoteControlCommandHandler(
+            IServiceProvider services,
+            string serverUri,
+            Option<string> hostOption,
+            Option<AppMode> modeOption,
+            Option<string> pipeNameOption,
+            Option<string> sessionIdOption,
+            Option<string> accessKeyOption,
+            Option<string> requesterNameOption,
+            Option<string> organizationNameOption,
+            Option<bool> relaunchOption,
+            Option<string> viewersOption,
+            Option<bool> elevateOption)
+        {
+            _services = services;
+            _serverUri = serverUri;
+            _hostOption = hostOption;
+            _modeOption = modeOption;
+            _pipeNameOption = pipeNameOption;
+            _sessionIdOption = sessionIdOption;
+            _accessKeyOption = accessKeyOption;
+            _requesterNameOption = requesterNameOption;
+            _organizationNameOption = organizationNameOption;
+            _relaunchOption = relaunchOption;
+            _viewersOption = viewersOption;
+            _elevateOption = elevateOption;
+        }
+
+        public async Task<int> InvokeAsync(InvocationContext context)
+        {
+            var host = context.ParseResult.GetValueForOption(_hostOption) ?? string.Empty;
+            var mode = context.ParseResult.GetValueForOption(_modeOption);
+            var pipeName = context.ParseResult.GetValueForOption(_pipeNameOption) ?? string.Empty;
+            var sessionId = context.ParseResult.GetValueForOption(_sessionIdOption) ?? string.Empty;
+            var accessKey = context.ParseResult.GetValueForOption(_accessKeyOption) ?? string.Empty;
+            var requesterName = context.ParseResult.GetValueForOption(_requesterNameOption) ?? string.Empty;
+            var organizationName = context.ParseResult.GetValueForOption(_organizationNameOption) ?? string.Empty;
+            var relaunch = context.ParseResult.GetValueForOption(_relaunchOption);
+            var viewers = context.ParseResult.GetValueForOption(_viewersOption) ?? string.Empty;
+            var elevate = context.ParseResult.GetValueForOption(_elevateOption);
+
+            // Validate pipe name when mode is Chat
+            if (mode == AppMode.Chat && string.IsNullOrWhiteSpace(pipeName))
+            {
+                Console.Error.WriteLine("A pipe name must be specified when AppMode is Chat.");
+                return 1;
+            }
+
+            if (string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(_serverUri))
+            {
+                host = _serverUri;
+            }
+
+            var result = await _services.UseRemoteControlClient(
+                host,
+                mode,
+                pipeName,
+                sessionId,
+                accessKey,
+                requesterName,
+                organizationName,
+                relaunch,
+                viewers,
+                elevate);
+
+            return result.IsFailure ? 1 : 0;
+        }
     }
 }

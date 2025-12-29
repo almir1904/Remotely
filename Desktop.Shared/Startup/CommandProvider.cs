@@ -29,49 +29,40 @@ public static class CommandProvider
             rootCommand = new Command(commandName, commandLineDescription);
         }
 
-        var hostOption = new Option<string>(
-            "--host",
-            "The hostname of the server to which to connect (e.g. https://example.com).");
-        hostOption.AddAlias("-h");
+        var hostOption = new Option<string>("--host", "The hostname of the server to which to connect (e.g. https://example.com).");
+        hostOption.Aliases.Add("-h");
         rootCommand.Options.Add(hostOption);
 
         var modeOption = new Option<AppMode>(
             "--mode",
-            () => AppMode.Attended,
-            "The remote control mode to use.  Either Attended, Unattended, or Chat.");
-        modeOption.AddAlias("-m");
+            description: "The remote control mode to use.  Either Attended, Unattended, or Chat.")
+        {
+            DefaultValueFactory = () => AppMode.Attended
+        };
+        modeOption.Aliases.Add("-m");
         rootCommand.Options.Add(modeOption);
 
-        var pipeNameOption = new Option<string>(
-            "--pipe-name",
-            "When AppMode is Chat, this is the pipe name used by the named pipes server.");
-        pipeNameOption.AddAlias("-p");
+        var pipeNameOption = new Option<string>("--pipe-name", "When AppMode is Chat, this is the pipe name used by the named pipes server.");
+        pipeNameOption.Aliases.Add("-p");
         rootCommand.Options.Add(pipeNameOption);
 
-        var sessionIdOption = new Option<string>(
-           "--session-id",
-           "In Unattended mode, this unique session ID will be assigned to this connection and " +
-           "shared with the server.  The connection can then be found in the RemoteControlSessionCache " +
-           "using this ID.");
-        sessionIdOption.AddAlias("-s");
+        var sessionIdOption = new Option<string>("--session-id", 
+            "In Unattended mode, this unique session ID will be assigned to this connection and " +
+            "shared with the server.  The connection can then be found in the RemoteControlSessionCache " +
+            "using this ID.");
+        sessionIdOption.Aliases.Add("-s");
         rootCommand.Options.Add(sessionIdOption);
 
-        var accessKeyOption = new Option<string>(
-            "--access-key",
-            "In Unattended mode, secures access to the connection using the provided key.");
-        accessKeyOption.AddAlias("-a");
+        var accessKeyOption = new Option<string>("--access-key", "In Unattended mode, secures access to the connection using the provided key.");
+        accessKeyOption.Aliases.Add("-a");
         rootCommand.Options.Add(accessKeyOption);
 
-        var requesterNameOption = new Option<string>(
-            "--requester-name",
-               "The name of the technician requesting to connect.");
-        requesterNameOption.AddAlias("-r");
+        var requesterNameOption = new Option<string>("--requester-name", "The name of the technician requesting to connect.");
+        requesterNameOption.Aliases.Add("-r");
         rootCommand.Options.Add(requesterNameOption);
 
-        var organizationNameOption = new Option<string>(
-            "--org-name",
-            "The organization name of the technician requesting to connect.");
-        organizationNameOption.AddAlias("-o");
+        var organizationNameOption = new Option<string>("--org-name", "The organization name of the technician requesting to connect.");
+        organizationNameOption.Aliases.Add("-o");
         rootCommand.Options.Add(organizationNameOption);
 
         var relaunchOption = new Option<bool>(
