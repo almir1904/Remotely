@@ -26,7 +26,7 @@ on:
         required: false
         default: "linux-x64"
       serverUrl:
-        description: 'Server URL for Windows ARM64 build'
+        description: 'Server URL (deprecated - no longer used)'
         required: false
 
 jobs:
@@ -99,7 +99,7 @@ jobs:
      
   build-linux:
     runs-on: ubuntu-latest
-    needs: build-mac
+    needs: [build-mac, build-windows]
     
     steps:
       - name: Checkout
@@ -141,6 +141,18 @@ jobs:
         with:
           name: Mac-Agent-arm64
           path: ./Server/wwwroot/Content/
+
+      - name: Download Windows x64 Agent
+        uses: actions/download-artifact@v7
+        with:
+          name: Win-Agent-x64
+          path: ./Server/wwwroot/Content/
+
+      - name: Download Windows x86 Agent
+        uses: actions/download-artifact@v7
+        with:
+          name: Win-Agent-x86
+          path: ./Server/wwwroot/Content/
           
       # Fix libman package resolution issues with cache cleaning
       - name: Setup libman and clean cache
@@ -170,22 +182,55 @@ jobs:
           fi
           
           cd ..
+
+      - name: Publish Linux x64 Agent
+        run: |
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./Agent/bin/publish/linux-x64" "./Agent/"
+          mkdir -p "./Agent/bin/publish/linux-x64/Desktop"
+          cd "./Agent/bin/publish/linux-x64"
+          zip -r "../Remotely-Linux.zip" .
+          cd ../../../../..
+          
+      - name: Publish Linux arm64 Agent
+        run: |
+          dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./Agent/bin/publish/linux-arm64" "./Agent/"
+          mkdir -p "./Agent/bin/publish/linux-arm64/Desktop"
+          cd "./Agent/bin/publish/linux-arm64"
+          zip -r "../Remotely-Linux-arm64.zip" .
+          cd ../../../../..
+
+      - name: Upload Linux x64 Agent
+        uses: actions/upload-artifact@v6
+        with:
+          path: ./Agent/bin/publish/Remotely-Linux.zip
+          name: Linux-Agent-x64
+          
+      - name: Upload Linux arm64 Agent
+        uses: actions/upload-artifact@v6
+        with:
+          path: ./Agent/bin/publish/Remotely-Linux-arm64.zip
+          name: Linux-Agent-arm64
+
+      - name: Copy Linux Agents to Server Content
+        run: |
+          cp ./Agent/bin/publish/Remotely-Linux.zip ./Server/wwwroot/Content/Remotely-Linux.zip
+          cp ./Agent/bin/publish/Remotely-Linux-arm64.zip ./Server/wwwroot/Content/Remotely-Linux-arm64.zip
       
-      - name: Build Linux x64
+      - name: Build Linux x64 Server
         run: |
           dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "./publishx64/" "./Server/"
           
-      - name: Build Linux arm64
+      - name: Build Linux arm64 Server
         run: |
           dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "./publisharm64/" "./Server/"
           
-      - name: Upload Linux x64 artifact
+      - name: Upload Linux x64 Server artifact
         uses: actions/upload-artifact@v6
         with:
           path: ./publishx64/
           name: Remotely_Server_Linux-x64
           
-      - name: Upload Linux arm64 artifact
+      - name: Upload Linux arm64 Server artifact
         uses: actions/upload-artifact@v6
         with:
           path: ./publisharm64/
@@ -256,43 +301,25 @@ jobs:
         echo "CurrentVersion=$CurrentVersion" >> $env:GITHUB_ENV
 
         Write-Host "Setting current version to $CurrentVersion."
-        
-        
-    - name: Download macOS x64 Agent
-      uses: actions/download-artifact@v7
-      with:
-        name: Mac-Agent-x64
-        path: ./Server/wwwroot/Content/
 
-    - name: Download macOS arm64 Agent
-      uses: actions/download-artifact@v7
-      with:
-        name: Mac-Agent-arm64
-        path: ./Server/wwwroot/Content/
-
-    # Run the Publish script to build clients and server.
-    - name: Build Windows x64
+    # Run the Publish script to build Windows agents only (no server build)
+    - name: Build Windows Agents
       shell: powershell
       run: |
-        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion -RID win-x64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-x64"
-        
-    - name: Build Windows arm64
-      shell: powershell
-      run: |
-        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -Hostname ${{ github.event.inputs.serverUrl }} -CurrentVersion $env:CurrentVersion -RID win-arm64 -OutDir "$env:GITHUB_WORKSPACE\publish-win-arm64"
+        .\Utilities\Publish.ps1 -CertificatePath "$env:GITHUB_WORKSPACE\GitHubActionsWorkflow.pfx" -CertificatePassword $env:PfxKey -CurrentVersion $env:CurrentVersion
 
-    # Upload build artifact to be deployed from Ubuntu runner
-    - name: Upload Windows x64 artifact
+    # Upload Windows Agent artifacts
+    - name: Upload Windows x64 Agent
       uses: actions/upload-artifact@v6
       with:
-        path: ./publish-win-x64/
-        name: Remotely_Server_Windows-x64
+        path: ./Server/wwwroot/Content/Remotely-Win-x64.zip
+        name: Win-Agent-x64
         
-    - name: Upload Windows arm64 artifact
+    - name: Upload Windows x86 Agent
       uses: actions/upload-artifact@v6
       with:
-        path: ./publish-win-arm64/
-        name: Remotely_Server_Windows-arm64
+        path: ./Server/wwwroot/Content/Remotely-Win-x86.zip
+        name: Win-Agent-x86
 
     # Remove the pfx
     - name: Remove the pfx

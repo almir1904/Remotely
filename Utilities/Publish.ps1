@@ -94,11 +94,15 @@ if ((Test-Path -Path  "$Root\Agent\bin\publish\win-x86" ) -eq $true) {
 if ((Test-Path -Path "$Root\Agent\bin\publish\linux-x64") -eq $true) {
     Get-ChildItem -Path "$Root\Agent\bin\publish\linux-x64" | Remove-Item -Force -Recurse
 }
+if ((Test-Path -Path "$Root\Agent\bin\publish\linux-arm64") -eq $true) {
+    Get-ChildItem -Path "$Root\Agent\bin\publish\linux-arm64" | Remove-Item -Force -Recurse
+}
 
 
 # Publish agents.
 dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime win-x64 --self-contained --configuration Release --output "$Root\Agent\bin\publish\win-x64" "$Root\Agent"
 dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-x64 --self-contained --configuration Release --output "$Root\Agent\bin\publish\linux-x64" "$Root\Agent"
+dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime linux-arm64 --self-contained --configuration Release --output "$Root\Agent\bin\publish\linux-arm64" "$Root\Agent"
 dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime win-x86 --self-contained --configuration Release --output "$Root\Agent\bin\publish\win-x86" "$Root\Agent"
 dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime osx-x64 --self-contained --configuration Release --output "$Root\Agent\bin\publish\osx-x64" "$Root\Agent"
 dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runtime osx-arm64 --self-contained --configuration Release --output "$Root\Agent\bin\publish\osx-arm64" "$Root\Agent"
@@ -106,6 +110,7 @@ dotnet publish /p:Version=$CurrentVersion /p:FileVersion=$CurrentVersion --runti
 New-Item -Path "$Root\Agent\bin\publish\win-x64\Desktop\" -ItemType Directory -Force
 New-Item -Path "$Root\Agent\bin\publish\win-x86\Desktop\" -ItemType Directory -Force
 New-Item -Path "$Root\Agent\bin\publish\linux-x64\Desktop\" -ItemType Directory -Force
+New-Item -Path "$Root\Agent\bin\publish\linux-arm64\Desktop\" -ItemType Directory -Force
 
 
 # Publish Linux ScreenCaster
@@ -151,6 +156,11 @@ $PublishDir = "$Root\Agent\bin\publish\linux-x64"
 Compress-Archive -Path "$PublishDir\*" -DestinationPath "$PublishDir\Remotely-Linux.zip" -Force
 Wait-ForExists -FilePath "$PublishDir\Remotely-Linux.zip"
 Move-Item -Path "$PublishDir\Remotely-Linux.zip" -Destination "$Root\Server\wwwroot\Content\Remotely-Linux.zip" -Force
+
+$PublishDir = "$Root\Agent\bin\publish\linux-arm64"
+Compress-Archive -Path "$PublishDir\*" -DestinationPath "$PublishDir\Remotely-Linux-arm64.zip" -Force
+Wait-ForExists -FilePath "$PublishDir\Remotely-Linux-arm64.zip"
+Move-Item -Path "$PublishDir\Remotely-Linux-arm64.zip" -Destination "$Root\Server\wwwroot\Content\Remotely-Linux-arm64.zip" -Force
 
 $PublishDir = "$Root\Agent\bin\publish\osx-x64"
 Compress-Archive -Path "$PublishDir\*" -DestinationPath "$PublishDir\Remotely-MacOS-x64.zip" -Force
