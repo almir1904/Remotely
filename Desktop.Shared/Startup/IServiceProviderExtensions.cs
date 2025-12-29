@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Remotely.Shared.Primitives;
 using System.CommandLine;
+using System.CommandLine.Parsing;
+using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.Runtime.Versioning;
 using Remotely.Desktop.Native.Windows;
@@ -110,18 +112,25 @@ public static class IServiceProviderExtensions
             var elevateOption = rootCommand.Options.OfType<Option<bool>>().FirstOrDefault(o => o.Aliases.Contains("--elevate")) 
                 ?? throw new InvalidOperationException("Elevate option not found");
 
-            rootCommand.SetHandler(async (InvocationContext context) =>
+            rootCommand.SetHandler(async (
+                string host,
+                AppMode mode,
+                string pipeName,
+                string sessionId,
+                string accessKey,
+                string requesterName,
+                string organizationName,
+                bool relaunch,
+                string viewers,
+                bool elevate) =>
             {
-                var host = context.ParseResult.GetValueForOption(hostOption) ?? string.Empty;
-                var mode = context.ParseResult.GetValueForOption(modeOption);
-                var pipeName = context.ParseResult.GetValueForOption(pipeNameOption) ?? string.Empty;
-                var sessionId = context.ParseResult.GetValueForOption(sessionIdOption) ?? string.Empty;
-                var accessKey = context.ParseResult.GetValueForOption(accessKeyOption) ?? string.Empty;
-                var requesterName = context.ParseResult.GetValueForOption(requesterNameOption) ?? string.Empty;
-                var organizationName = context.ParseResult.GetValueForOption(organizationNameOption) ?? string.Empty;
-                var relaunch = context.ParseResult.GetValueForOption(relaunchOption);
-                var viewers = context.ParseResult.GetValueForOption(viewersOption) ?? string.Empty;
-                var elevate = context.ParseResult.GetValueForOption(elevateOption);
+                // Validate pipe name when mode is Chat
+                if (mode == AppMode.Chat && string.IsNullOrWhiteSpace(pipeName))
+                {
+                    Console.Error.WriteLine("A pipe name must be specified when AppMode is Chat.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
                 if (string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(serverUri))
                 {
@@ -129,26 +138,38 @@ public static class IServiceProviderExtensions
                 }
 
                 var result = await services.UseRemoteControlClient(
-                    host,
+                    host ?? string.Empty,
                     mode,
-                    pipeName,
-                    sessionId,
-                    accessKey,
-                    requesterName,
-                    organizationName,
+                    pipeName ?? string.Empty,
+                    sessionId ?? string.Empty,
+                    accessKey ?? string.Empty,
+                    requesterName ?? string.Empty,
+                    organizationName ?? string.Empty,
                     relaunch,
-                    viewers,
+                    viewers ?? string.Empty,
                     elevate);
 
                 if (result.IsFailure)
                 {
-                    context.ExitCode = 1;
+                    Environment.ExitCode = 1;
                 }
-            });
+            },
+            hostOption,
+            modeOption,
+            pipeNameOption,
+            sessionIdOption,
+            accessKeyOption,
+            requesterNameOption,
+            organizationNameOption,
+            relaunchOption,
+            viewersOption,
+            elevateOption);
 
             rootCommand.TreatUnmatchedTokensAsErrors = treatUnmatchedArgsAsErrors;
 
-            var result = await rootCommand.InvokeAsync(args);
+            var commandLineBuilder = new CommandLineBuilder(rootCommand);
+            var parser = commandLineBuilder.Build();
+            var result = await parser.InvokeAsync(args);
 
             if (result == 0)
             {

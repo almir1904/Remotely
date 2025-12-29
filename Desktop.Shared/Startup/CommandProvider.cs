@@ -30,69 +30,67 @@ public static class CommandProvider
         }
 
         var hostOption = new Option<string>(
-            new[] { "-h", "--host" },
+            "--host",
             "The hostname of the server to which to connect (e.g. https://example.com).");
-        rootCommand.AddOption(hostOption);
+        hostOption.AddAlias("-h");
+        rootCommand.Options.Add(hostOption);
 
         var modeOption = new Option<AppMode>(
-            new[] { "-m", "--mode" },
+            "--mode",
             () => AppMode.Attended,
             "The remote control mode to use.  Either Attended, Unattended, or Chat.");
-        rootCommand.AddOption(modeOption);
-
+        modeOption.AddAlias("-m");
+        rootCommand.Options.Add(modeOption);
 
         var pipeNameOption = new Option<string>(
-            new[] { "-p", "--pipe-name" },
+            "--pipe-name",
             "When AppMode is Chat, this is the pipe name used by the named pipes server.");
-        pipeNameOption.AddValidator((context) =>
-        {
-            if (context.GetValueForOption(modeOption) == AppMode.Chat &&
-                string.IsNullOrWhiteSpace(context.GetValueOrDefault<string>()))
-            {
-                context.ErrorMessage = "A pipe name must be specified when AppMode is Chat.";
-            }
-        });
-        rootCommand.AddOption(pipeNameOption);
+        pipeNameOption.AddAlias("-p");
+        rootCommand.Options.Add(pipeNameOption);
 
         var sessionIdOption = new Option<string>(
-           new[] { "-s", "--session-id" },
+           "--session-id",
            "In Unattended mode, this unique session ID will be assigned to this connection and " +
            "shared with the server.  The connection can then be found in the RemoteControlSessionCache " +
            "using this ID.");
-        rootCommand.AddOption(sessionIdOption);
+        sessionIdOption.AddAlias("-s");
+        rootCommand.Options.Add(sessionIdOption);
 
         var accessKeyOption = new Option<string>(
-            new[] { "-a", "--access-key" },
+            "--access-key",
             "In Unattended mode, secures access to the connection using the provided key.");
-        rootCommand.AddOption(accessKeyOption);
+        accessKeyOption.AddAlias("-a");
+        rootCommand.Options.Add(accessKeyOption);
 
         var requesterNameOption = new Option<string>(
-            new[] { "-r", "--requester-name" },
+            "--requester-name",
                "The name of the technician requesting to connect.");
-        rootCommand.AddOption(requesterNameOption);
+        requesterNameOption.AddAlias("-r");
+        rootCommand.Options.Add(requesterNameOption);
 
         var organizationNameOption = new Option<string>(
-            new[] { "-o", "--org-name" },
+            "--org-name",
             "The organization name of the technician requesting to connect.");
-        rootCommand.AddOption(organizationNameOption);
+        organizationNameOption.AddAlias("-o");
+        rootCommand.Options.Add(organizationNameOption);
 
         var relaunchOption = new Option<bool>(
             "--relaunch",
             "Used to indicate that process is being relaunched from a previous session " +
             "and should notify viewers when it's ready.");
-        rootCommand.AddOption(relaunchOption);
+        rootCommand.Options.Add(relaunchOption);
 
         var viewersOption = new Option<string>(
             "--viewers",
             "Used with --relaunch.  Should be a comma-separated list of viewers' " +
             "SignalR connection IDs.");
-        rootCommand.AddOption(viewersOption);
+        rootCommand.Options.Add(viewersOption);
 
         var elevateOption = new Option<bool>(
             "--elevate",
             "Must be called from a Windows service.  The process will relaunch " +
             "itself in the console session with elevated rights.");
-        rootCommand.AddOption(elevateOption);
+        rootCommand.Options.Add(elevateOption);
 
         return rootCommand;
     }
