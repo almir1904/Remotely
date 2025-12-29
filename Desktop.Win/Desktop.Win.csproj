@@ -53,6 +53,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     <Resource Include="Assets\favicon.ico" />
     <EmbeddedResource Include="Assets\Remotely_Icon.png" />
   </ItemGroup>
