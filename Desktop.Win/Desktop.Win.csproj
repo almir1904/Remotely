@@ -39,11 +39,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.10" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
     <PackageReference Include="SharpDX.DXGI" Version="4.2.0" />
-    <PackageReference Include="SkiaSharp.Views.Desktop.Common" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.Views.Desktop.Common" Version="3.119.1" />
   </ItemGroup>
 
   <ItemGroup>

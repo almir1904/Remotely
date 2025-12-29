@@ -54,6 +54,9 @@
     <EmbeddedResource Include="Assets\Remotely_Icon.png" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.10" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Desktop.Shared\Desktop.Shared.csproj" />
     <ProjectReference Include="..\Desktop.UI\Desktop.UI.csproj" />
   </ItemGroup>
