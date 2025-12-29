@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Remotely.Shared.Primitives;
 using System.CommandLine;
-using System.CommandLine.NamingConventionBinder;
+using System.CommandLine.Invocation;
 using System.Runtime.Versioning;
 using Remotely.Desktop.Native.Windows;
 
@@ -88,24 +88,47 @@ public static class IServiceProviderExtensions
         {
             var rootCommand = CommandProvider.CreateRemoteControlCommand(true, commandLineDescription);
 
-            rootCommand.Handler = CommandHandler.Create(async (
-                string host,
-                AppMode mode,
-                string pipeName,
-                string sessionId,
-                string accessKey,
-                string requesterName,
-                string organizationName,
-                bool relaunch,
-                string viewers,
-                bool elevate) =>
+            // Get options from the command for SetHandler binding
+            var hostOption = rootCommand.Options.OfType<Option<string>>().FirstOrDefault(o => o.Aliases.Contains("--host")) 
+                ?? throw new InvalidOperationException("Host option not found");
+            var modeOption = rootCommand.Options.OfType<Option<AppMode>>().FirstOrDefault(o => o.Aliases.Contains("--mode")) 
+                ?? throw new InvalidOperationException("Mode option not found");
+            var pipeNameOption = rootCommand.Options.OfType<Option<string>>().FirstOrDefault(o => o.Aliases.Contains("--pipe-name")) 
+                ?? throw new InvalidOperationException("Pipe name option not found");
+            var sessionIdOption = rootCommand.Options.OfType<Option<string>>().FirstOrDefault(o => o.Aliases.Contains("--session-id")) 
+                ?? throw new InvalidOperationException("Session ID option not found");
+            var accessKeyOption = rootCommand.Options.OfType<Option<string>>().FirstOrDefault(o => o.Aliases.Contains("--access-key")) 
+                ?? throw new InvalidOperationException("Access key option not found");
+            var requesterNameOption = rootCommand.Options.OfType<Option<string>>().FirstOrDefault(o => o.Aliases.Contains("--requester-name")) 
+                ?? throw new InvalidOperationException("Requester name option not found");
+            var organizationNameOption = rootCommand.Options.OfType<Option<string>>().FirstOrDefault(o => o.Aliases.Contains("--org-name")) 
+                ?? throw new InvalidOperationException("Organization name option not found");
+            var relaunchOption = rootCommand.Options.OfType<Option<bool>>().FirstOrDefault(o => o.Aliases.Contains("--relaunch")) 
+                ?? throw new InvalidOperationException("Relaunch option not found");
+            var viewersOption = rootCommand.Options.OfType<Option<string>>().FirstOrDefault(o => o.Aliases.Contains("--viewers")) 
+                ?? throw new InvalidOperationException("Viewers option not found");
+            var elevateOption = rootCommand.Options.OfType<Option<bool>>().FirstOrDefault(o => o.Aliases.Contains("--elevate")) 
+                ?? throw new InvalidOperationException("Elevate option not found");
+
+            rootCommand.SetHandler(async (InvocationContext context) =>
             {
+                var host = context.ParseResult.GetValueForOption(hostOption) ?? string.Empty;
+                var mode = context.ParseResult.GetValueForOption(modeOption);
+                var pipeName = context.ParseResult.GetValueForOption(pipeNameOption) ?? string.Empty;
+                var sessionId = context.ParseResult.GetValueForOption(sessionIdOption) ?? string.Empty;
+                var accessKey = context.ParseResult.GetValueForOption(accessKeyOption) ?? string.Empty;
+                var requesterName = context.ParseResult.GetValueForOption(requesterNameOption) ?? string.Empty;
+                var organizationName = context.ParseResult.GetValueForOption(organizationNameOption) ?? string.Empty;
+                var relaunch = context.ParseResult.GetValueForOption(relaunchOption);
+                var viewers = context.ParseResult.GetValueForOption(viewersOption) ?? string.Empty;
+                var elevate = context.ParseResult.GetValueForOption(elevateOption);
+
                 if (string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(serverUri))
                 {
                     host = serverUri;
                 }
 
-                return await services.UseRemoteControlClient(
+                var result = await services.UseRemoteControlClient(
                     host,
                     mode,
                     pipeName,
@@ -116,6 +139,11 @@ public static class IServiceProviderExtensions
                     relaunch,
                     viewers,
                     elevate);
+
+                if (result.IsFailure)
+                {
+                    context.ExitCode = 1;
+                }
             });
 
             rootCommand.TreatUnmatchedTokensAsErrors = treatUnmatchedArgsAsErrors;
