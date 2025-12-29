@@ -21,12 +21,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GIT_TOKEN }}
       
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+      
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5.7.0
         with:
           images: |
-           ghcr.io/${{ github.repository }}
+           ghcr.io/${{ steps.repo.outputs.name }}
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.6.0
@@ -45,5 +49,5 @@ jobs:
           push: true
           platforms: linux/amd64, linux/arm64
           tags: |
-            ghcr.io/${{ github.repository }}:dev
+            ghcr.io/${{ steps.repo.outputs.name }}:dev
           labels: ${{ steps.meta.outputs.labels }}
