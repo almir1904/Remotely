@@ -6,8 +6,6 @@ using Microsoft.Extensions.Logging;
 using Remotely.Shared.Primitives;
 using System.CommandLine;
 using System.CommandLine.Parsing;
-using System.CommandLine.Builder;
-using System.CommandLine.Invocation;
 using System.Runtime.Versioning;
 using Remotely.Desktop.Native.Windows;
 
@@ -167,9 +165,9 @@ public static class IServiceProviderExtensions
 
             rootCommand.TreatUnmatchedTokensAsErrors = treatUnmatchedArgsAsErrors;
 
-            var commandLineBuilder = new CommandLineBuilder(rootCommand);
-            var parser = commandLineBuilder.Build();
-            var result = await parser.InvokeAsync(args);
+            // Parse and invoke the command
+            var parseResult = rootCommand.Parse(args);
+            var result = await parseResult.InvokeAsync();
 
             if (result == 0)
             {
