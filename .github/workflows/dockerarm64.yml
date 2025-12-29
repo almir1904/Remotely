@@ -1,6 +1,9 @@
 name: Publish AMD64 & ARM64 Docker image
 
 on:
+  push:
+    branches:
+      - dev
   workflow_dispatch:
 
 jobs:
@@ -24,7 +27,6 @@ jobs:
         with:
           images: |
            ghcr.io/${{ github.repository }}
-          
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.6.0
@@ -42,5 +44,6 @@ jobs:
           context: ./Server
           push: true
           platforms: linux/amd64, linux/arm64
-          tags: ghcr.io/almir1904/remotely:latest
+          tags: |
+            ghcr.io/${{ github.repository }}:dev
           labels: ${{ steps.meta.outputs.labels }}
