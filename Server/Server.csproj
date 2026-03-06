@@ -50,6 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.60.4" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
