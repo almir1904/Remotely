@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 EXPOSE ${ASPNETCORE_HTTP_PORTS}
 
@@ -10,4 +10,4 @@ WORKDIR /app
 ENTRYPOINT ["dotnet", "Remotely_Server.dll"]
 
 HEALTHCHECK \
-  CMD curl -f http://localhost:${ASPNETCORE_HTTP_PORTS}/api/healthcheck || exit 1
+CMD curl -f http://localhost:${ASPNETCORE_HTTP_PORTS}/api/healthcheck || exit 1
