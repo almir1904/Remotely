@@ -1,5 +1,4 @@
-﻿#nullable enable
-
+#nullable enable
 using Microsoft.Extensions.Logging;
 using Remotely.Shared.Utilities;
 using System.Collections.Concurrent;
@@ -24,7 +23,7 @@ public class FileLogger : ILogger
     private string LogPath => FileLoggerDefaults.GetLogPath(_componentName);
 
     public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull
+    where TState : notnull
     {
         _scopeStack.Push($"{state}");
         return new NoopDisposable();
@@ -40,16 +39,20 @@ public class FileLogger : ILogger
             _ => false,
         };
     }
-    public async void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        using var logLock = await FileLoggerDefaults.AcquireLock();
 
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        _ = LogAsync(logLevel, eventId, state, exception, formatter);
+    }
+
+    private async Task LogAsync<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
         try
         {
-
+            using var logLock = await FileLoggerDefaults.AcquireLock();
             var message = FormatLogEntry(logLevel, _categoryName, $"{state}", exception, _scopeStack.ToArray());
             CheckLogFileExists();
-            File.AppendAllText(LogPath, message);
+            await File.AppendAllTextAsync(LogPath, message);
             CleanupLogs();
         }
         catch (Exception ex)
@@ -57,7 +60,6 @@ public class FileLogger : ILogger
             Console.WriteLine($"Error writing log entry: {ex.Message}");
         }
     }
-
 
 
     private void CheckLogFileExists()
@@ -78,8 +80,8 @@ public class FileLogger : ILogger
         _lastLogCleanup = DateTimeOffset.Now;
 
         var logFiles = Directory.GetFiles(Path.GetDirectoryName(LogPath)!)
-            .Select(x => new FileInfo(x))
-            .Where(x => DateTime.Now - x.CreationTime > TimeSpan.FromDays(7));
+        .Select(x => new FileInfo(x))
+        .Where(x => DateTime.Now - x.CreationTime > TimeSpan.FromDays(7));
 
         foreach (var file in logFiles)
         {
@@ -89,7 +91,7 @@ public class FileLogger : ILogger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error while trying to delete log file {file.FullName}.  Message: {ex.Message}");
+                Console.WriteLine($"Error while trying to delete log file {file.FullName}. Message: {ex.Message}");
             }
         }
     }
@@ -105,11 +107,11 @@ public class FileLogger : ILogger
         }
 
         var entry =
-            $"[{logLevel}]\t" +
-            $"[v{_componentVersion}]\t" +
-            $"[Process ID: {Environment.ProcessId}]\t" +
-            $"[Thread ID: {Environment.CurrentManagedThreadId}]\t" +
-            $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]\t";
+        $"[{logLevel}]\t" +
+        $"[v{_componentVersion}]\t" +
+        $"[Process ID: {Environment.ProcessId}]\t" +
+        $"[Thread ID: {Environment.CurrentManagedThreadId}]\t" +
+        $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff}]\t";
 
         if (exception is not null)
         {
@@ -117,8 +119,8 @@ public class FileLogger : ILogger
         }
 
         entry += scopeStack.Any() ?
-                    $"[{categoryName} => {string.Join(" => ", scopeStack)}]\t" :
-                    $"[{categoryName}]\t";
+        $"[{categoryName} => {string.Join(" => ", scopeStack)}]\t" :
+        $"[{categoryName}]\t";
 
         entry += $"{state}\t";
 

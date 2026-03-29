@@ -569,10 +569,10 @@ public class AgentHubConnection : IAgentHubConnection, IDisposable
             throw new InvalidOperationException("Hub connection is not established.");
         }
     }
-    private async void HeartbeatTimer_Elapsed(object? sender, ElapsedEventArgs e)
-    {
-        await SendHeartbeat();
-    }
+private void HeartbeatTimer_Elapsed(object? sender, ElapsedEventArgs e)
+{
+_ = SendHeartbeat();
+}
 
     private async Task HubConnection_Reconnected(string? arg)
     {
